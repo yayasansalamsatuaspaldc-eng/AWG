@@ -105,16 +105,15 @@
     .glow-green { text-shadow: 0 0 10px rgba(0, 230, 118, 0.5); }
     .glow-red { text-shadow: 0 0 10px rgba(255, 74, 90, 0.5); }
 
-    /* Mobile Container Constraint */
+    /* Main Container (Sekarang fleksibel untuk semua layar) */
     .mobile-container {
       width: 100%;
-      max-width: 480px;
+      max-width: 100%;
       margin: 0 auto;
       min-height: 100vh;
-      min-height: 100dvh; /* viewport dinamis: menyesuaikan saat address bar HP muncul/hilang */
+      min-height: 100dvh;
       position: relative;
       background-color: var(--bg-color);
-      box-shadow: 0 0 20px rgba(0,0,0,0.5);
       overflow-x: hidden;
     }
     
@@ -133,30 +132,24 @@
       padding-bottom: calc(0.5rem + env(safe-area-inset-bottom, 0px)) !important;
     }
 
-    /* ===== Responsif untuk Tablet & Laptop ===== */
-    /* Di layar lebar, tampilkan sebagai kartu "frame HP" yang mengambang
-       di tengah supaya tidak melebar penuh dan tetap enak dilihat/dipakai. */
+    /* ===== Penyesuaian Tampilan Desktop (Layar Lebar) ===== */
     @media (min-width: 768px) {
-      body {
-        display: flex;
-        justify-content: center;
-        align-items: flex-start;
-        background: var(--shadow-dark);
-      }
-      .mobile-container {
-        max-width: 480px;
-        min-height: 100vh;
-        margin-top: 0;
-        border-radius: 0 0 1.5rem 1.5rem;
-      }
       nav.fixed {
-        max-width: 480px;
+        max-width: 100%; /* Menu bawah merentang penuh */
+        padding-left: 2rem;
+        padding-right: 2rem;
+        border-radius: 0; /* Hilangkan lengkungan di desktop */
       }
-    }
-
-    @media (min-width: 1024px) {
-      .mobile-container {
-        box-shadow: 0 0 40px rgba(0,0,0,0.6);
+      .content-scroll-area {
+        padding-left: 2rem;
+        padding-right: 2rem;
+        max-width: 1200px; /* Batas konten agak di tengah agar tidak terlalu melar */
+        margin: 0 auto;
+      }
+      
+      /* Membuat grid untuk form registrasi agar sebelahan di layar lebar */
+      #formRegistrasi .flex.gap-3 {
+        gap: 1.5rem;
       }
     }
   </style>
