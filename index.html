@@ -660,12 +660,15 @@
             submitRegistrasi: function(payload) { callApi("submitRegistrasi", payload).then(this._success).catch(this._failure); },
             submitPenyelesaian: function(payload) { callApi("submitPenyelesaian", payload).then(this._success).catch(this._failure); },
             generateDokumen: function(periode, tipe) { callApi("generateDokumen", { periode, tipe }).then(this._success).catch(this._failure); },
-            cariNamaAlm: function(keyword) { callApi("cariNamaAlm", keyword).then(this._success).catch(this._failure); },
-            cekDuplikatNamaAlm: function(namaAlm) { callApi("cekDuplikatNamaAlm", namaAlm).then(this._success).catch(this._failure); }
+            cariNamaAlm: function(keyword) { callApi("cariNamaAlm", keyword).then(this._success).catch(this._failure);
+},
+            cekDuplikatNamaAlm: function(namaAlm) { callApi("cekDuplikatNamaAlm", namaAlm).then(this._success).catch(this._failure);
+},
+            cekPinAkses: function(pin) { callApi("cekPinAkses", pin).then(this._success).catch(this._failure); }
           }
         }
       };
-    }
+}
     // -------------------------------------------------------------
 
     // --- Modal Alert Custom (pengganti alert() bawaan browser) ---
@@ -968,20 +971,44 @@
       });
     }
 
-    // PIN standar untuk membuka tab "Data Baru" (Registrasi)
-    const PIN_TAB_REGISTRASI = "321654";
-
     // Fungsi Navigasi Tab Bottom Nav
     function switchTab(tabId) {
-      // Tab "Data Baru" (registrasi) diproteksi PIN: tampilkan modal PIN dulu,
-      // baru pindah tab kalau PIN yang diketik benar.
+      // Tab "Data Baru" (registrasi) dan "Print Data" (export) diproteksi PIN
       if (tabId === 'registrasi') {
-        mintaPinTabRegistrasi();
+        mintaPinAksesKeServer(tabId, "Masukkan PIN untuk membuka Data Baru");
+        return;
+      }
+      if (tabId === 'export') {
+        mintaPinAksesKeServer(tabId, "Masukkan PIN untuk membuka Print Data");
         return;
       }
       switchTabInternal(tabId);
     }
 
+    async function mintaPinAksesKeServer(tabTujuan, pesan) {
+      const pin = await showPinModal(pesan);
+      if (pin === null) return; // User menekan Batal
+
+      toggleLoading(true, "Memeriksa Otorisasi...");
+      
+      google.script.run
+        .withSuccessHandler(function(res) {
+          toggleLoading(false);
+          if (res.success && res.valid) {
+            switchTabInternal(tabTujuan);
+          } else {
+            showAlert("PIN salah. Akses ditolak.", 'error');
+          }
+        })
+        .withFailureHandler(function(err) {
+          toggleLoading(false);
+          showAlert("Gagal memeriksa PIN: " + err.message, 'error');
+        })
+        .cekPinAkses(pin);
+    }
+
+    // Proses inti perpindahan tab (dipanggil setelah lolos proteksi PIN bila perlu)
+    function switchTabInternal(tabId) {
     async function mintaPinTabRegistrasi() {
       const pin = await showPinModal("Masukkan PIN untuk membuka Data Baru");
       if (pin === null) return; // User menekan Batal
