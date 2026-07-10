@@ -660,15 +660,13 @@
             submitRegistrasi: function(payload) { callApi("submitRegistrasi", payload).then(this._success).catch(this._failure); },
             submitPenyelesaian: function(payload) { callApi("submitPenyelesaian", payload).then(this._success).catch(this._failure); },
             generateDokumen: function(periode, tipe) { callApi("generateDokumen", { periode, tipe }).then(this._success).catch(this._failure); },
-            cariNamaAlm: function(keyword) { callApi("cariNamaAlm", keyword).then(this._success).catch(this._failure);
-},
-            cekDuplikatNamaAlm: function(namaAlm) { callApi("cekDuplikatNamaAlm", namaAlm).then(this._success).catch(this._failure);
-},
-            cekPinAkses: function(pin) { callApi("cekPinAkses", pin).then(this._success).catch(this._failure); }
+            cariNamaAlm: function(keyword) { callApi("cariNamaAlm", keyword).then(this._success).catch(this._failure); },
+            cekDuplikatNamaAlm: function(namaAlm) { callApi("cekDuplikatNamaAlm", namaAlm).then(this._success).catch(this._failure); },
+            verifyPinTab: function(payload) { callApi("verifyPinTab", payload).then(this._success).catch(this._failure); }
           }
         }
       };
-}
+    }
     // -------------------------------------------------------------
 
     // --- Modal Alert Custom (pengganti alert() bawaan browser) ---
@@ -971,52 +969,48 @@
       });
     }
 
+    // CATATAN KEAMANAN: PIN tab TIDAK disimpan di file ini (index.html) lagi.
+    // PIN asli hanya ada di Code.gs (server). Frontend cuma mengirim PIN yang
+    // diketik user ke server untuk dicocokkan, lalu server membalas true/false
+    // saja -- jadi PIN tidak bisa dilihat lewat "View Page Source" / DevTools.
+
     // Fungsi Navigasi Tab Bottom Nav
     function switchTab(tabId) {
-      // Tab "Data Baru" (registrasi) dan "Print Data" (export) diproteksi PIN
+      // Tab "Data Baru" (registrasi) & "Print Data" (export) diproteksi PIN:
+      // tampilkan modal PIN dulu, baru pindah tab kalau PIN terverifikasi benar.
       if (tabId === 'registrasi') {
-        mintaPinAksesKeServer(tabId, "Masukkan PIN untuk membuka Data Baru");
+        mintaPinTab('registrasi', 'Masukkan PIN untuk membuka Data Baru');
         return;
       }
       if (tabId === 'export') {
-        mintaPinAksesKeServer(tabId, "Masukkan PIN untuk membuka Print Data");
+        mintaPinTab('export', 'Masukkan PIN untuk membuka Print Data');
         return;
       }
       switchTabInternal(tabId);
     }
 
-    async function mintaPinAksesKeServer(tabTujuan, pesan) {
-      const pin = await showPinModal(pesan);
+    // Fungsi umum: tampilkan modal PIN, lalu kirim ke Code.gs (verifyPinTab)
+    // untuk dicocokkan di server. tabId di sini juga dipakai backend untuk
+    // menentukan PIN mana yang harus dicocokkan (lihat objek PIN_TAB di Code.gs).
+    async function mintaPinTab(tabId, pesanModal) {
+      const pin = await showPinModal(pesanModal);
       if (pin === null) return; // User menekan Batal
 
-      toggleLoading(true, "Memeriksa Otorisasi...");
-      
+      toggleLoading(true, "Memeriksa PIN...");
       google.script.run
-        .withSuccessHandler(function(res) {
+        .withSuccessHandler(function (res) {
           toggleLoading(false);
-          if (res.success && res.valid) {
-            switchTabInternal(tabTujuan);
+          if (res && res.success && res.valid) {
+            switchTabInternal(tabId);
           } else {
             showAlert("PIN salah. Akses ditolak.", 'error');
           }
         })
-        .withFailureHandler(function(err) {
+        .withFailureHandler(function (err) {
           toggleLoading(false);
-          showAlert("Gagal memeriksa PIN: " + err.message, 'error');
+          showAlert("Gagal memeriksa PIN: " + (err && err.message ? err.message : err), 'error');
         })
-        .cekPinAkses(pin);
-    }
-
-    // Proses inti perpindahan tab (dipanggil setelah lolos proteksi PIN bila perlu)
-    function switchTabInternal(tabId) {
-    async function mintaPinTabRegistrasi() {
-      const pin = await showPinModal("Masukkan PIN untuk membuka Data Baru");
-      if (pin === null) return; // User menekan Batal
-      if (pin === PIN_TAB_REGISTRASI) {
-        switchTabInternal('registrasi');
-      } else {
-        showAlert("PIN salah. Akses ke Data Baru ditolak.", 'error');
-      }
+        .verifyPinTab({ tab: tabId, pin: pin });
     }
 
     // Proses inti perpindahan tab (dipanggil setelah lolos proteksi PIN bila perlu)
