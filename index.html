@@ -258,6 +258,29 @@
           </select>
         </div>
 
+        <!-- Card Pipeline Alur Pengajuan ke Gojek -->
+        <div class="neu-flat p-5 mb-6">
+          <div class="flex items-center mb-4">
+             <svg class="w-5 h-5 text-gray-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
+             <h3 class="font-bold tracking-wider">ALUR PENGAJUAN GOJEK</h3>
+          </div>
+          <div class="grid grid-cols-3 gap-3">
+            <div class="neu-inset p-3 rounded-xl flex flex-col items-center">
+              <span class="text-[9px] text-[var(--text-sub)] uppercase font-bold mb-1 text-center">Diajukan</span>
+              <span class="text-xl font-bold text-blue-400" id="dash-diajukan">0</span>
+            </div>
+            <div class="neu-inset p-3 rounded-xl flex flex-col items-center">
+              <span class="text-[9px] text-[var(--text-sub)] uppercase font-bold mb-1 text-center">Pending</span>
+              <span class="text-xl font-bold text-[#ff4a5a]" id="dash-pending">0</span>
+            </div>
+            <div class="neu-inset p-3 rounded-xl flex flex-col items-center">
+              <span class="text-[9px] text-[var(--text-sub)] uppercase font-bold mb-1 text-center">Lulus</span>
+              <span class="text-xl font-bold text-[#00e676]" id="dash-lulus">0</span>
+            </div>
+          </div>
+          <div class="text-[10px] text-center mt-3 text-[var(--text-sub)] uppercase">BULAN INI</div>
+        </div>
+
         <!-- Card Antrian Bar -->
         <div class="neu-flat p-5">
           <div class="flex items-center mb-4">
@@ -268,7 +291,7 @@
           <div class="neu-inset p-4 rounded-xl flex items-center justify-between">
              <div class="flex items-center">
                 <div class="w-3 h-3 rounded-full bg-yellow-500 mr-3 animate-pulse"></div>
-                <span class="text-sm font-semibold text-[var(--text-sub)] uppercase">Belum Lolos</span>
+                <span class="text-sm font-semibold text-[var(--text-sub)] uppercase">Belum Diajukan</span>
              </div>
              <span class="text-xl font-bold text-yellow-500" id="dash-antrian">0</span>
           </div>
@@ -386,6 +409,24 @@
             <div class="neu-inset p-3 hidden" id="containerPicManual">
               <label class="block text-[10px] text-[var(--text-sub)] uppercase font-bold mb-1 px-1">PIC (Tulis Manual)</label>
               <input type="text" id="regPicManual" placeholder="Tulis nama PIC..." class="px-1 text-[var(--text-main)]">
+            </div>
+
+            <!-- Divider -->
+            <div class="h-px bg-[var(--shadow-light)] my-4 mx-2"></div>
+
+            <!-- Kelengkapan Berkas Syarat Ahli Waris -->
+            <div class="neu-flat p-4 border-l-4 border-yellow-500">
+              <label class="block text-[10px] text-[var(--text-sub)] uppercase font-bold mb-2 px-1">Kelengkapan Berkas Ahli Waris</label>
+              <p class="text-[10px] text-[var(--text-sub)] mb-3 px-1">Centang dokumen yang sudah diterima tim yassa dari ahli waris (syarat sebelum diajukan ke Gojek).</p>
+              <div id="checklistBerkas" class="space-y-2">
+                <!-- Diisi otomatis oleh JS dari daftar syarat -->
+              </div>
+            </div>
+
+            <div class="neu-inset p-3">
+              <label class="block text-[10px] text-[var(--text-sub)] uppercase font-bold mb-1 px-1">Tahun STNK (wajib aktif, maks. 10 tahun berjalan)</label>
+              <input type="number" id="regTahunStnk" placeholder="cth: 2018" min="1980" max="2100" class="px-1 font-semibold text-[var(--text-main)]">
+              <span id="warningTahunStnk" class="hidden text-[10px] text-[#ff4a5a] font-semibold px-1"></span>
             </div>
 
             <!-- Upload File -->
@@ -631,6 +672,27 @@
     </div>
   </div>
 
+  <!-- Modal Hasil Kualifikasi Gojek, dipakai saat admin dapat kabar dari Gojek (via WA) -->
+  <div id="customHasilGojekOverlay" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] hidden items-center justify-center p-6">
+    <div class="neu-flat max-w-sm w-full p-6 rounded-2xl">
+      <div class="w-12 h-12 mx-auto mb-3 rounded-full flex items-center justify-center text-xl font-bold bg-blue-500/15 text-blue-400">📩</div>
+      <p class="text-center text-sm text-[var(--text-main)] mb-1 font-bold" id="hasilGojekNama">-</p>
+      <p class="text-center text-[10px] text-[var(--text-sub)] mb-4">Input hasil kualifikasi dari Gojek (info via WA)</p>
+
+      <div class="flex gap-3 mb-4">
+        <button id="btnHasilLulus" onclick="pilihHasilGojek('Lulus')" class="flex-1 neu-flat py-3 rounded-xl font-bold text-sm text-[#00e676] active:scale-95 transition">✓ LULUS</button>
+        <button id="btnHasilPending" onclick="pilihHasilGojek('Pending')" class="flex-1 neu-flat py-3 rounded-xl font-bold text-sm text-yellow-500 active:scale-95 transition">✕ PENDING</button>
+      </div>
+
+      <div class="neu-inset p-3 mb-4">
+        <label class="block text-[10px] text-[var(--text-sub)] uppercase font-bold mb-1 px-1">Catatan dari Gojek (opsional)</label>
+        <input type="text" id="hasilGojekCatatan" placeholder="cth: dokumen kurang jelas, dll." class="px-1 text-[var(--text-main)]">
+      </div>
+
+      <button id="customHasilGojekCancelBtn" class="w-full neu-flat py-3 rounded-xl font-bold text-sm text-[var(--text-sub)] active:scale-95 transition">Batal</button>
+    </div>
+  </div>
+
   <!-- SCRIPT LOGIKA FRONTEND -->
   <script>
     // --- JEMBATAN API (Penghubung GitHub ke Google Apps Script) ---
@@ -662,7 +724,11 @@
             generateDokumen: function(periode, tipe) { callApi("generateDokumen", { periode, tipe }).then(this._success).catch(this._failure); },
             cariNamaAlm: function(keyword) { callApi("cariNamaAlm", keyword).then(this._success).catch(this._failure); },
             cekDuplikatNamaAlm: function(namaAlm) { callApi("cekDuplikatNamaAlm", namaAlm).then(this._success).catch(this._failure); },
-            verifyPinTab: function(payload) { callApi("verifyPinTab", payload).then(this._success).catch(this._failure); }
+            verifyPinTab: function(payload) { callApi("verifyPinTab", payload).then(this._success).catch(this._failure); },
+            ajukanKeGojek: function(payload) { callApi("ajukanKeGojek", payload).then(this._success).catch(this._failure); },
+            updateHasilGojek: function(payload) { callApi("updateHasilGojek", payload).then(this._success).catch(this._failure); },
+            ajukanUlangGojek: function(payload) { callApi("ajukanUlangGojek", payload).then(this._success).catch(this._failure); },
+            getSyaratDokumen: function() { callApi("getSyaratDokumen").then(this._success).catch(this._failure); }
           }
         }
       };
@@ -1137,12 +1203,61 @@
       });
     }
 
+    // Render checklist kelengkapan berkas (7 syarat dokumen ahli waris) di form Registrasi.
+    // Daftar diambil dari server (DAFTAR_SYARAT_DOKUMEN di Code.gs) supaya satu sumber kebenaran.
+    function renderChecklistBerkas(daftarSyarat) {
+      const container = document.getElementById('checklistBerkas');
+      container.innerHTML = daftarSyarat.map((label, i) => `
+        <label class="flex items-center gap-2 neu-inset p-2 rounded-lg cursor-pointer">
+          <input type="checkbox" id="berkas_${i}" data-label="${label}" class="w-4 h-4 accent-[#00e676]">
+          <span class="text-xs text-[var(--text-main)]">${label}</span>
+        </label>
+      `).join("");
+    }
+
+    function loadSyaratDokumen() {
+      google.script.run
+        .withSuccessHandler(function(res) {
+          if (res && res.success) renderChecklistBerkas(res.syarat);
+        })
+        .withFailureHandler(function() {
+          // Fallback statis kalau gagal ambil dari server, biar form tetap bisa dipakai.
+          renderChecklistBerkas([
+            "Fotokopi KTP Almarhum/ah", "Surat Kematian",
+            "Kartu Keluarga (masih tercantum nama Almarhum & Ahli Waris)",
+            "KTP Ahli Waris", "SIM Ahli Waris (wajib aktif)",
+            "STNK Kendaraan (wajib aktif, maks. 10 tahun berjalan)", "SKCK Ahli Waris"
+          ]);
+        })
+        .getSyaratDokumen();
+    }
+
+    // Validasi Tahun STNK: maksimal 10 tahun berjalan dari tahun sekarang.
+    function validasiTahunStnk() {
+      const input = document.getElementById('regTahunStnk');
+      const warning = document.getElementById('warningTahunStnk');
+      const val = parseInt(input.value);
+      if (!val) { warning.classList.add('hidden'); return true; }
+
+      const tahunSekarang = new Date().getFullYear();
+      const batasMin = tahunSekarang - 10;
+      if (val < batasMin || val > tahunSekarang) {
+        warning.innerText = `STNK harus keluaran maksimal 10 tahun berjalan (${batasMin} - ${tahunSekarang}).`;
+        warning.classList.remove('hidden');
+        return false;
+      }
+      warning.classList.add('hidden');
+      return true;
+    }
+
     // Default saat load
     window.onload = () => {
       populateRegPeriode();
       loadDaftarPeriodeExport();
       loadDataFromServer();
       pasangSanitasiInputHp();
+      loadSyaratDokumen();
+      document.getElementById('regTahunStnk').addEventListener('input', validasiTahunStnk);
     };
 
     // Isi dropdown Filter PIC di Beranda berdasarkan nama PIC unik pada antrian bulan berjalan,
@@ -1207,10 +1322,15 @@
             document.getElementById('dash-jalur-gopay').innerText = response.dashboard.totalGopay || 0;
             document.getElementById('dash-jalur-nongopay').innerText = response.dashboard.totalNonGopay || 0;
 
+            document.getElementById('dash-diajukan').innerText = response.dashboard.totalDiajukan || 0;
+            document.getElementById('dash-pending').innerText = response.dashboard.totalPending || 0;
+            document.getElementById('dash-lulus').innerText = response.dashboard.totalLulus || 0;
+
             globalAntrianData = response.antrian;
 
-            // Simpan khusus antrian periode berjalan (dipakai ulang saat filter PIC berubah)
-            globalAntrianBulanIni = response.antrian.filter(item => item.periode === response.currentPeriode);
+            // Simpan khusus yang BELUM diajukan ke Gojek (status "Antrian") pada periode berjalan
+            // (dipakai ulang saat filter PIC berubah, untuk daftar "Belum Diajukan" di Beranda)
+            globalAntrianBulanIni = response.antrian.filter(item => item.periode === response.currentPeriode && item.status === 'Antrian');
 
             // Isi dropdown Filter PIC dari nama PIC unik yang muncul di antrian bulan ini
             populateFilterPicBeranda(globalAntrianBulanIni);
@@ -1225,6 +1345,30 @@
               listContainer.innerHTML = `<div class="neu-inset p-5 text-center text-[var(--text-sub)] text-xs mt-4">Belum ada data antrian yang masuk.</div>`;
             } else {
               response.antrian.forEach(item => {
+                // Badge status & tombol aksi berbeda sesuai tahap alur:
+                // Antrian -> Diajukan ke Gojek -> Lulus Kualifikasi -> (Kontrol/Penyelesaian) -> Selesai
+                //                                -> Pending -> Ajukan Ulang -> Diajukan ke Gojek lagi
+                let badgeStatus = "";
+                let tombolAksi = "";
+                let infoTambahan = "";
+
+                if (item.status === 'Antrian') {
+                  badgeStatus = `<span class="text-[9px] px-2 py-0.5 neu-inset rounded uppercase font-bold text-yellow-500">Antrian</span>`;
+                  tombolAksi = `<button onclick="ajukanKeGojek('${item.rowIndex}', '${item.namaAhli}')" class="px-4 py-1.5 rounded-full text-[10px] font-bold text-white bg-yellow-600 shadow-[0_0_10px_rgba(202,138,4,0.5)] active:scale-95 transition">AJUKAN KE GOJEK</button>`;
+                } else if (item.status === 'Diajukan ke Gojek') {
+                  badgeStatus = `<span class="text-[9px] px-2 py-0.5 neu-inset rounded uppercase font-bold text-blue-400">Diajukan ke Gojek</span>`;
+                  infoTambahan = item.tanggalDiajukan ? `<div class="text-[10px] text-[var(--text-sub)] mt-1">Diajukan: ${item.tanggalDiajukan}</div>` : "";
+                  tombolAksi = `<button onclick="bukaModalHasilGojek('${item.rowIndex}', '${item.namaAhli}')" class="px-4 py-1.5 rounded-full text-[10px] font-bold text-white bg-blue-600 shadow-[0_0_10px_rgba(37,99,235,0.5)] active:scale-95 transition">INPUT HASIL</button>`;
+                } else if (item.status === 'Pending') {
+                  badgeStatus = `<span class="text-[9px] px-2 py-0.5 neu-inset rounded uppercase font-bold text-[#ff4a5a]">Pending</span>`;
+                  infoTambahan = `<div class="text-[10px] text-[var(--text-sub)] mt-1">Rencana ajukan ulang: ${item.rencanaAjukanUlang || '-'}</div>` +
+                    (item.catatanGojek ? `<div class="text-[10px] text-[var(--text-sub)] italic">Catatan Gojek: ${item.catatanGojek}</div>` : "");
+                  tombolAksi = `<button onclick="ajukanUlang('${item.rowIndex}', '${item.namaAhli}')" class="px-4 py-1.5 rounded-full text-[10px] font-bold text-white bg-[#ff4a5a] shadow-[0_0_10px_rgba(255,74,90,0.5)] active:scale-95 transition">AJUKAN ULANG</button>`;
+                } else if (item.status === 'Lulus Kualifikasi') {
+                  badgeStatus = `<span class="text-[9px] px-2 py-0.5 neu-inset rounded uppercase font-bold text-[#00e676]">Lulus Kualifikasi</span>`;
+                  tombolAksi = `<button onclick="goToVerifikasi('${item.id}')" class="px-4 py-1.5 rounded-full text-[10px] font-bold text-white bg-[#00e676] shadow-[0_0_10px_rgba(0,230,118,0.5)] active:scale-95 transition">VERIFIKASI</button>`;
+                }
+
                 listContainer.innerHTML += `
                   <div class="neu-flat p-4 mb-4 relative overflow-hidden">
                     <div class="absolute top-0 right-0 w-16 h-16 bg-yellow-500 rounded-full filter blur-2xl opacity-10 -mr-5 -mt-5"></div>
@@ -1233,26 +1377,29 @@
                         <h3 class="font-bold text-lg text-[var(--text-main)]">${item.namaAhli}</h3>
                         <p class="text-[10px] font-semibold text-yellow-500 tracking-wider">ALM. ${item.namaAlm}</p>
                       </div>
-                      <span class="text-[10px] px-2 py-1 neu-inset rounded uppercase font-bold text-[var(--text-sub)]">${item.periode}</span>
+                      <div class="flex flex-col items-end gap-1">
+                        <span class="text-[10px] px-2 py-1 neu-inset rounded uppercase font-bold text-[var(--text-sub)]">${item.periode}</span>
+                        ${badgeStatus}
+                      </div>
                     </div>
+                    ${infoTambahan}
                     <div class="flex items-center justify-between mt-4">
                       <div class="text-xs text-[var(--text-sub)] flex items-center">
                          <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
                          ${item.wilayah}
                       </div>
-                      <button onclick="goToVerifikasi('${item.id}')" class="px-4 py-1.5 rounded-full text-[10px] font-bold text-white bg-blue-600 shadow-[0_0_10px_rgba(37,99,235,0.5)] active:scale-95 transition">
-                        VERIFIKASI
-                      </button>
+                      ${tombolAksi}
                     </div>
                   </div>
                 `;
               });
             }
 
-            // Update Dropdown Penyelesaian
+            // Update Dropdown Penyelesaian: hanya data yang sudah "Lulus Kualifikasi" dari Gojek
+            // yang boleh lanjut ke tahap verifikasi/sahkan mitra.
             const selectPeny = document.getElementById('penyAhliWaris');
             selectPeny.innerHTML = `<option value="" class="bg-[var(--card-bg)] text-black">Pilih dari Antrian...</option>`;
-            response.antrian.forEach(item => {
+            response.antrian.filter(item => item.status === 'Lulus Kualifikasi').forEach(item => {
               selectPeny.innerHTML += `<option value="${item.id}" data-row="${item.rowIndex}" class="bg-[var(--card-bg)] text-black">${item.namaAhli} (Alm. ${item.namaAlm})</option>`;
             });
 
@@ -1273,6 +1420,11 @@
       const namaAlmInput = document.getElementById('regNamaAlm').value;
       const fileKtpInput = document.getElementById('regKtp').files[0];
       // Foto KTP opsional: kalau tidak dipilih, lanjut simpan tanpa foto.
+
+      // Validasi Tahun STNK dulu sebelum lanjut (kalau diisi tapi di luar batas 10 tahun)
+      if (!validasiTahunStnk()) {
+        return showAlert("Tahun STNK di luar batas maksimal 10 tahun berjalan. Perbaiki dulu sebelum simpan.", 'warning');
+      }
 
       toggleLoading(true, "Mengecek data...");
       try {
@@ -1315,7 +1467,9 @@
             : document.getElementById('regPic').value,
           periode: document.getElementById('regPeriode').value,
           fileKtpBase64: fileBase ? fileBase.data : null,
-          fileKtpMime: fileBase ? fileBase.mime : null
+          fileKtpMime: fileBase ? fileBase.mime : null,
+          kelengkapanBerkas: Array.from(document.querySelectorAll('#checklistBerkas input:checked')).map(el => el.getAttribute('data-label')),
+          tahunStnk: document.getElementById('regTahunStnk').value
         };
 
         google.script.run
@@ -1325,6 +1479,7 @@
               showAlert("Registrasi Ahli Waris berhasil disimpan dan masuk daftar antrian.", 'success');
               document.getElementById('formRegistrasi').reset();
               resetFileUI(); // Tambahkan ini
+              document.getElementById('warningTahunStnk').classList.add('hidden');
               toggleStatusAlmManual(); // Sembunyikan lagi field manual Status Akun
               togglePicManual(); // Sembunyikan lagi field manual PIC
               switchTab('antrian');
@@ -1343,6 +1498,99 @@
         showAlert("Gagal memproses data: " + (error && error.message ? error.message : "terjadi kesalahan."), 'error');
       }
     }
+
+    // --- TAHAP ANTARA: AJUKAN KE GOJEK & INPUT HASIL KUALIFIKASI ---
+
+    // Ajukan data (status "Antrian") ke pihak Gojek untuk dicek kelengkapan & kualifikasi.
+    async function ajukanKeGojek(rowIndex, namaAhli) {
+      const lanjut = await showConfirmModal(`Ajukan data "${namaAhli}" ke Gojek sekarang?`);
+      if (!lanjut) return;
+
+      toggleLoading(true, "Mengajukan ke Gojek...");
+      google.script.run
+        .withSuccessHandler(function(res) {
+          toggleLoading(false);
+          if (res.success) {
+            showAlert("Data berhasil diajukan ke Gojek. Menunggu kabar kelengkapan/kualifikasi via WA.", 'success');
+            loadDataFromServer();
+          } else {
+            showAlert("Error: " + res.message, 'error');
+          }
+        })
+        .withFailureHandler(function(err) {
+          toggleLoading(false);
+          showAlert("System Error: " + err.message, 'error');
+        })
+        .ajukanKeGojek({ rowIndex: parseInt(rowIndex) });
+    }
+
+    // Ajukan ulang data yang sebelumnya "Pending" (gagal kualifikasi bulan lalu)
+    async function ajukanUlang(rowIndex, namaAhli) {
+      const lanjut = await showConfirmModal(`Ajukan ulang data "${namaAhli}" ke Gojek sekarang?`);
+      if (!lanjut) return;
+
+      toggleLoading(true, "Mengajukan ulang ke Gojek...");
+      google.script.run
+        .withSuccessHandler(function(res) {
+          toggleLoading(false);
+          if (res.success) {
+            showAlert("Data berhasil diajukan ulang ke Gojek.", 'success');
+            loadDataFromServer();
+          } else {
+            showAlert("Error: " + res.message, 'error');
+          }
+        })
+        .withFailureHandler(function(err) {
+          toggleLoading(false);
+          showAlert("System Error: " + err.message, 'error');
+        })
+        .ajukanUlangGojek({ rowIndex: parseInt(rowIndex) });
+    }
+
+    // Modal Input Hasil Kualifikasi dari Gojek (info diterima admin via WA)
+    let hasilGojekRowIndex = null;
+
+    function bukaModalHasilGojek(rowIndex, namaAhli) {
+      hasilGojekRowIndex = rowIndex;
+      document.getElementById('hasilGojekNama').innerText = namaAhli;
+      document.getElementById('hasilGojekCatatan').value = "";
+      const overlay = document.getElementById('customHasilGojekOverlay');
+      overlay.classList.remove('hidden');
+      overlay.classList.add('flex');
+    }
+
+    function tutupModalHasilGojek() {
+      const overlay = document.getElementById('customHasilGojekOverlay');
+      overlay.classList.add('hidden');
+      overlay.classList.remove('flex');
+      hasilGojekRowIndex = null;
+    }
+
+    function pilihHasilGojek(hasil) {
+      if (!hasilGojekRowIndex) return;
+      const catatan = document.getElementById('hasilGojekCatatan').value;
+      const rowIndex = hasilGojekRowIndex;
+      tutupModalHasilGojek();
+
+      toggleLoading(true, "Menyimpan hasil kualifikasi...");
+      google.script.run
+        .withSuccessHandler(function(res) {
+          toggleLoading(false);
+          if (res.success) {
+            showAlert(res.message, 'success');
+            loadDataFromServer();
+          } else {
+            showAlert("Error: " + res.message, 'error');
+          }
+        })
+        .withFailureHandler(function(err) {
+          toggleLoading(false);
+          showAlert("System Error: " + err.message, 'error');
+        })
+        .updateHasilGojek({ rowIndex: parseInt(rowIndex), hasil: hasil, catatan: catatan });
+    }
+
+    document.getElementById('customHasilGojekCancelBtn').addEventListener('click', tutupModalHasilGojek);
 
     // Pindah ke Tab Verifikasi & Otomatis Pilih Dropdown
     function goToVerifikasi(id) {
