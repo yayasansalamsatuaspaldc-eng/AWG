@@ -548,12 +548,11 @@
                  <input type="hidden" id="penyRowIndex">
                </div>
 
-               <!-- Kartu Nama: konfirmasi visual siapa yang lagi diproses, biar nggak salah pilih -->
-               <div id="penyNamaBox" class="hidden neu-flat p-4 border-l-4 border-[#00e676]">
-                 <p class="text-[9px] text-[var(--text-sub)] uppercase font-bold mb-1">Nama Ahli Waris</p>
-                 <p class="text-lg font-bold text-[var(--text-main)]" id="penyNamaAhli">-</p>
-                 <p class="text-sm font-semibold text-yellow-500" id="penyNamaAlm">-</p>
-                 <p class="text-[10px] text-[var(--text-sub)] mt-1" id="penyNamaWilayah">-</p>
+               <!-- Kartu Nama: bisa diedit, buat dicocokin/dikoreksi sesuai nama
+                    yang kepasang di akun Gojek (bukti pas Sahkan Mitra) -->
+               <div id="penyNamaBox" class="hidden neu-inset p-3 border-l-4 border-[#00e676]">
+                 <label class="block text-[9px] text-[var(--text-sub)] uppercase font-bold mb-1 px-1">Nama (Cocokkan/Koreksi sesuai Akun Gojek)</label>
+                 <input type="text" id="penyNamaAhli" class="px-1 text-xl font-bold text-[var(--text-main)] bg-transparent w-full">
                </div>
    
                <div class="neu-inset p-3">
@@ -1943,9 +1942,7 @@
       if(selectedOption && selectedOption.value !== "") {
         document.getElementById('penyRowIndex').value = selectedOption.getAttribute('data-row');
 
-        document.getElementById('penyNamaAhli').innerText = selectedOption.getAttribute('data-nama') || '-';
-        document.getElementById('penyNamaAlm').innerText = 'Alm. ' + (selectedOption.getAttribute('data-alm') || '-');
-        document.getElementById('penyNamaWilayah').innerText = (selectedOption.getAttribute('data-wilayah') || '-') + ' • PIC: ' + (selectedOption.getAttribute('data-pic') || '-');
+        document.getElementById('penyNamaAhli').value = selectedOption.getAttribute('data-nama') || '';
         namaBox.classList.remove('hidden');
       } else {
         document.getElementById('penyRowIndex').value = "";
@@ -1956,11 +1953,12 @@
     // Handler Submit Verifikasi
     async function handlePenyelesaian(e) {
       e.preventDefault();
-      const selectId = document.getElementById('penyAhliWaris');
+      const selectId = document.getElementById('penyAhliWaris'); // dipakai buat validasi & reset select-nya
       const rowIndex = document.getElementById('penyRowIndex').value;
-      const namaAhliWarisText = selectId.options[selectId.selectedIndex].text.split(" (Alm.")[0].trim();
+      const namaAhliWarisText = document.getElementById('penyNamaAhli').value.trim();
       
       if(!rowIndex) return showAlert("Pilih Ahli Waris yang valid.", 'warning');
+      if(!namaAhliWarisText) return showAlert("Nama tidak boleh kosong.", 'warning');
       
       const fileSsInput = document.getElementById('penySsAkun').files[0];
       const fileJaketInput = document.getElementById('penyFotoJaket').files[0];
