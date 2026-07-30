@@ -213,6 +213,10 @@
             <h2 class="font-bold text-lg tracking-wider">PERIODE <span id="dash-periode" class="text-yellow-500">...</span></h2>
           </div>
           <p class="text-xs text-[var(--text-sub)]">Ringkasan pendaftaran mitra ahli waris bulan ini.</p>
+          <button onclick="switchTab('export')" class="mt-3 text-[10px] font-bold text-blue-400 flex items-center">
+             Lihat Rekap Periode Lain
+             <svg class="w-3 h-3 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+          </button>
         </div>
         
         <!-- Grid Cards -->
@@ -593,9 +597,50 @@
 
             <div class="neu-inset p-3 mb-6 border-l-4 border-blue-500">
                <label class="block text-[10px] text-[var(--text-sub)] uppercase font-bold mb-1 px-1">Periode Export</label>
-               <select id="expPeriode" class="px-1 font-bold text-[var(--text-main)]">
+               <select id="expPeriode" onchange="clearRekapPeriode()" class="px-1 font-bold text-[var(--text-main)]">
                  <option value="" class="bg-[var(--card-bg)] text-black">Memuat periode...</option>
                </select>
+             </div>
+
+             <!-- Rekap per Periode: total pendaftaran & berapa yang akhirnya jadi mitra,
+                  dihitung dari periode registrasi awal (bukan cuma bulan berjalan kayak Beranda) -->
+             <button onclick="lihatRekapPeriode()" class="w-full mb-4 neu-flat p-3 flex items-center justify-center gap-2 text-xs font-bold text-yellow-500 active:scale-95 transition">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                LIHAT REKAP PERIODE INI
+             </button>
+
+             <div id="rekapPeriodeBox" class="hidden neu-flat p-5 mb-6">
+                <h3 class="font-bold text-sm tracking-wider mb-1 text-center" id="rekapPeriodeJudul">REKAP PERIODE</h3>
+                <p class="text-[10px] text-[var(--text-sub)] text-center mb-4">Dihitung dari periode registrasi awal</p>
+
+                <div class="neu-inset p-4 rounded-xl flex items-center justify-between mb-3">
+                   <span class="text-sm font-semibold text-[var(--text-sub)] uppercase">Total Terdaftar</span>
+                   <span class="text-2xl font-bold text-[var(--text-main)]" id="rekap-total">0</span>
+                </div>
+
+                <div class="neu-inset p-4 rounded-xl flex items-center justify-between mb-3 border-l-4 border-[#00e676]">
+                   <span class="text-sm font-semibold text-[var(--text-sub)] uppercase">Berhasil Jadi Mitra</span>
+                   <span class="text-2xl font-bold text-[#00e676]" id="rekap-selesai">0</span>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                   <div class="neu-inset p-3 rounded-xl flex flex-col items-center">
+                      <span class="text-[9px] text-[var(--text-sub)] uppercase font-bold mb-1 text-center">Antrian</span>
+                      <span class="text-lg font-bold text-yellow-500" id="rekap-antrian">0</span>
+                   </div>
+                   <div class="neu-inset p-3 rounded-xl flex flex-col items-center">
+                      <span class="text-[9px] text-[var(--text-sub)] uppercase font-bold mb-1 text-center">Diajukan</span>
+                      <span class="text-lg font-bold text-blue-400" id="rekap-diajukan">0</span>
+                   </div>
+                   <div class="neu-inset p-3 rounded-xl flex flex-col items-center">
+                      <span class="text-[9px] text-[var(--text-sub)] uppercase font-bold mb-1 text-center">Pending</span>
+                      <span class="text-lg font-bold text-[#ff4a5a]" id="rekap-pending">0</span>
+                   </div>
+                   <div class="neu-inset p-3 rounded-xl flex flex-col items-center">
+                      <span class="text-[9px] text-[var(--text-sub)] uppercase font-bold mb-1 text-center">Verifikasi</span>
+                      <span class="text-lg font-bold text-[#00e676]" id="rekap-lulus">0</span>
+                   </div>
+                </div>
              </div>
 
              <div class="space-y-4">
@@ -772,6 +817,7 @@
             
             getAppData: function() { callApi("getAppData").then(this._success).catch(this._failure); },
             getDaftarPeriode: function() { callApi("getDaftarPeriode").then(this._success).catch(this._failure); },
+            getRekapPeriode: function(payload) { callApi("getRekapPeriode", payload).then(this._success).catch(this._failure); },
             submitRegistrasi: function(payload) { callApi("submitRegistrasi", payload).then(this._success).catch(this._failure); },
             submitPenyelesaian: function(payload) { callApi("submitPenyelesaian", payload).then(this._success).catch(this._failure); },
             generateDokumen: function(periode, tipe) { callApi("generateDokumen", { periode, tipe }).then(this._success).catch(this._failure); },
@@ -1965,6 +2011,45 @@
           showAlert("System Error: " + err.message, 'error');
         })
         .generateDokumen(periode, tipe);
+    }
+
+    // Rekap per Periode: beda dari card di Beranda yang cuma ngitung bulan berjalan,
+    // ini ngitung SEMUA data yang periode REGISTRASI-nya sama dengan periode dipilih,
+    // nggak peduli statusnya sekarang udah berubah/kapan (misal diajukan Juli, baru
+    // Sahkan Mitra bulan Oktober tetap kehitung "Berhasil" di rekap periode Juli).
+    function lihatRekapPeriode() {
+      const periode = document.getElementById('expPeriode').value;
+      if (!periode) return showAlert("Pilih periode dulu!", 'warning');
+
+      toggleLoading(true, "Menghitung rekap...");
+      google.script.run
+        .withSuccessHandler(function(res) {
+          toggleLoading(false);
+          if (res.success) {
+            const r = res.rekap;
+            document.getElementById('rekapPeriodeJudul').innerText = "REKAP " + r.periode.toUpperCase();
+            document.getElementById('rekap-total').innerText = r.totalTerdaftar;
+            document.getElementById('rekap-selesai').innerText = r.totalSelesai;
+            document.getElementById('rekap-antrian').innerText = r.totalAntrian;
+            document.getElementById('rekap-diajukan').innerText = r.totalDiajukan;
+            document.getElementById('rekap-pending').innerText = r.totalPending;
+            document.getElementById('rekap-lulus').innerText = r.totalLulusKualifikasi;
+            document.getElementById('rekapPeriodeBox').classList.remove('hidden');
+          } else {
+            showAlert("Gagal: " + res.message, 'error');
+          }
+        })
+        .withFailureHandler(function(err) {
+          toggleLoading(false);
+          showAlert("System Error: " + err.message, 'error');
+        })
+        .getRekapPeriode({ periode: periode });
+    }
+
+    // Sembunyikan rekap lama kalau periode-nya diganti, biar nggak nampilin angka basi
+    // sebelum admin nge-klik "Lihat Rekap Periode Ini" lagi.
+    function clearRekapPeriode() {
+      document.getElementById('rekapPeriodeBox').classList.add('hidden');
     }
   </script>
 </body>
