@@ -132,6 +132,13 @@
       padding-bottom: calc(0.5rem + env(safe-area-inset-bottom, 0px)) !important;
     }
 
+    /* Bar aksi batch (mengambang di atas nav bawah): posisinya harus di atas
+       tinggi nav + gesture bar Android/iOS, jadi jangan pakai angka tetap (bottom-20),
+       ikutin pola yang sama seperti .content-scroll-area supaya konsisten di semua HP. */
+    .batch-bar-safe {
+      bottom: calc(6rem + env(safe-area-inset-bottom, 0px));
+    }
+
     /* ===== Penyesuaian Tampilan Desktop (Layar Lebar) ===== */
     @media (min-width: 768px) {
       nav.fixed {
@@ -480,7 +487,7 @@
       </section>
 
       <!-- Bar Aksi Batch Melayang: muncul kalau ada minimal 1 data "Antrian" dicentang -->
-      <div id="batch-action-bar" class="hidden fixed bottom-20 left-0 right-0 mx-auto max-w-md px-4 z-40">
+      <div id="batch-action-bar" class="hidden fixed batch-bar-safe left-0 right-0 mx-auto max-w-md px-4 z-50">
          <div class="neu-flat p-3 flex items-center justify-between gap-3 border-t-2 border-yellow-600">
             <span class="text-xs font-bold text-[var(--text-main)]"><span id="batchSelectedCount">0</span> dipilih</span>
             <button onclick="ajukanBatchKeGojek()" class="px-4 py-2 rounded-full text-xs font-bold text-white bg-yellow-600 shadow-[0_0_10px_rgba(202,138,4,0.5)] active:scale-95 transition">
@@ -1392,12 +1399,18 @@
                   tombolAksi = `<button onclick="goToVerifikasi('${item.id}')" class="px-4 py-1.5 rounded-full text-[10px] font-bold text-white bg-[#00e676] shadow-[0_0_10px_rgba(0,230,118,0.5)] active:scale-95 transition">VERIFIKASI</button>`;
                 }
 
-                let checkboxHtml = item.status === 'Antrian'
-                  ? `<input type="checkbox" class="chk-batch-antrian w-5 h-5 accent-yellow-600 mt-1 mr-1 flex-shrink-0" data-row="${item.rowIndex}" onchange="toggleSelectAntrian('${item.rowIndex}', this.checked)">`
-                  : `<div class="w-5 mr-1 flex-shrink-0"></div>`;
+                let isAntrian = item.status === 'Antrian';
+                let sudahDipilih = selectedAntrianRowIndexes.has(String(item.rowIndex));
+                let checkboxHtml = isAntrian
+                  ? `<input type="checkbox" class="chk-batch-antrian w-6 h-6 accent-yellow-600 mt-1 mr-2 flex-shrink-0 pointer-events-none" data-row="${item.rowIndex}" ${sudahDipilih ? 'checked' : ''}>`
+                  : `<div class="w-6 mr-2 flex-shrink-0"></div>`;
+                // Kartu status "Antrian" bisa di-tap di mana aja buat centang (bukan cuma kotak kecilnya),
+                // biar gampang milih banyak sekaligus tanpa perlu presisi jari nge-tap kotaknya.
+                let cardTapAttr = isAntrian ? `onclick="handleCardTapAntrian(event, '${item.rowIndex}')" role="checkbox" aria-checked="${sudahDipilih}"` : "";
+                let cardHighlight = sudahDipilih ? "ring-2 ring-yellow-500" : "";
 
                 listContainer.innerHTML += `
-                  <div class="neu-flat p-4 mb-4 relative overflow-hidden">
+                  <div id="card-antrian-${item.rowIndex}" class="neu-flat p-4 mb-4 relative overflow-hidden ${cardHighlight} ${isAntrian ? 'cursor-pointer' : ''}" ${cardTapAttr}>
                     <div class="absolute top-0 right-0 w-16 h-16 bg-yellow-500 rounded-full filter blur-2xl opacity-10 -mr-5 -mt-5"></div>
                     <div class="flex justify-between items-start mb-2">
                       <div class="flex items-start">
@@ -1547,11 +1560,38 @@
       updateBatchActionBar();
     }
 
+    // Tap di mana aja di kartu (judul, alamat, area kosong) langsung centang/uncentang --
+    // nggak perlu presisi nge-tap kotak kecil. Klik tombol "AJUKAN KE GOJEK" tetap jalan normal (diabaikan di sini).
+    function handleCardTapAntrian(event, rowIndex) {
+      if (event.target.closest('button')) return;
+
+      const sudah = selectedAntrianRowIndexes.has(String(rowIndex));
+      const checked = !sudah;
+      toggleSelectAntrian(rowIndex, checked);
+
+      const card = document.getElementById('card-antrian-' + rowIndex);
+      if (card) {
+        const chk = card.querySelector('.chk-batch-antrian');
+        if (chk) chk.checked = checked;
+        card.setAttribute('aria-checked', String(checked));
+        card.classList.toggle('ring-2', checked);
+        card.classList.toggle('ring-yellow-500', checked);
+      }
+    }
+
     function toggleSelectAllAntrian(checked) {
       document.querySelectorAll('.chk-batch-antrian').forEach(function (chk) {
+        const rowIndex = chk.dataset.row;
         chk.checked = checked;
-        if (checked) selectedAntrianRowIndexes.add(chk.dataset.row);
-        else selectedAntrianRowIndexes.delete(chk.dataset.row);
+        if (checked) selectedAntrianRowIndexes.add(rowIndex);
+        else selectedAntrianRowIndexes.delete(rowIndex);
+
+        const card = document.getElementById('card-antrian-' + rowIndex);
+        if (card) {
+          card.setAttribute('aria-checked', String(checked));
+          card.classList.toggle('ring-2', checked);
+          card.classList.toggle('ring-yellow-500', checked);
+        }
       });
       updateBatchActionBar();
     }
