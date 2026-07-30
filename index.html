@@ -547,6 +547,14 @@
                  </select>
                  <input type="hidden" id="penyRowIndex">
                </div>
+
+               <!-- Kartu Nama: konfirmasi visual siapa yang lagi diproses, biar nggak salah pilih -->
+               <div id="penyNamaBox" class="hidden neu-flat p-4 border-l-4 border-[#00e676]">
+                 <p class="text-[9px] text-[var(--text-sub)] uppercase font-bold mb-1">Nama Ahli Waris</p>
+                 <p class="text-lg font-bold text-[var(--text-main)]" id="penyNamaAhli">-</p>
+                 <p class="text-sm font-semibold text-yellow-500" id="penyNamaAlm">-</p>
+                 <p class="text-[10px] text-[var(--text-sub)] mt-1" id="penyNamaWilayah">-</p>
+               </div>
    
                <div class="neu-inset p-3">
                  <label class="block text-[10px] text-[var(--text-sub)] uppercase font-bold mb-1 px-1">No HP Gojek Baru</label>
@@ -1562,7 +1570,7 @@
             const selectPeny = document.getElementById('penyAhliWaris');
             selectPeny.innerHTML = `<option value="" class="bg-[var(--card-bg)] text-black">Pilih dari Antrian...</option>`;
             response.antrian.filter(item => item.status === 'Lulus Kualifikasi').forEach(item => {
-              selectPeny.innerHTML += `<option value="${item.id}" data-row="${item.rowIndex}" class="bg-[var(--card-bg)] text-black">${item.namaAhli} (Alm. ${item.namaAlm})</option>`;
+              selectPeny.innerHTML += `<option value="${item.id}" data-row="${item.rowIndex}" data-nama="${item.namaAhli}" data-alm="${item.namaAlm}" data-wilayah="${item.wilayah}" data-pic="${item.pic || '-'}" class="bg-[var(--card-bg)] text-black">${item.namaAhli} (Alm. ${item.namaAlm})</option>`;
             });
 
           } else {
@@ -1930,10 +1938,18 @@
     function autoFillPenyelesaian() {
       const select = document.getElementById('penyAhliWaris');
       const selectedOption = select.options[select.selectedIndex];
+      const namaBox = document.getElementById('penyNamaBox');
+
       if(selectedOption && selectedOption.value !== "") {
         document.getElementById('penyRowIndex').value = selectedOption.getAttribute('data-row');
+
+        document.getElementById('penyNamaAhli').innerText = selectedOption.getAttribute('data-nama') || '-';
+        document.getElementById('penyNamaAlm').innerText = 'Alm. ' + (selectedOption.getAttribute('data-alm') || '-');
+        document.getElementById('penyNamaWilayah').innerText = (selectedOption.getAttribute('data-wilayah') || '-') + ' • PIC: ' + (selectedOption.getAttribute('data-pic') || '-');
+        namaBox.classList.remove('hidden');
       } else {
         document.getElementById('penyRowIndex').value = "";
+        namaBox.classList.add('hidden');
       }
     }
 
@@ -1973,6 +1989,7 @@
             if(res.success) {
               showAlert("Mitra berhasil disahkan!", 'success');
               document.getElementById('formPenyelesaian').reset();
+              document.getElementById('penyNamaBox').classList.add('hidden');
               resetFileUI(); // Tambahkan ini
               switchTab('dashboard');
             } else {
