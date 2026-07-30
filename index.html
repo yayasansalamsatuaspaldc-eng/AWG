@@ -260,7 +260,7 @@
         <!-- Filter PIC -->
         <div class="neu-flat p-4 mb-4 flex items-center gap-3">
           <label for="filterPicBeranda" class="text-[10px] text-[var(--text-sub)] uppercase font-bold whitespace-nowrap">Filter PIC</label>
-          <select id="filterPicBeranda" onchange="renderAntrianBeranda()" class="flex-1 px-2 py-1 text-xs text-[var(--text-main)] bg-transparent appearance-none neu-inset rounded-lg">
+          <select id="filterPicBeranda" onchange="renderAntrianBeranda(); renderVerifikasiBeranda();" class="flex-1 px-2 py-1 text-xs text-[var(--text-main)] bg-transparent appearance-none neu-inset rounded-lg">
             <option value="" class="bg-[var(--card-bg)] text-black">Semua PIC</option>
           </select>
         </div>
@@ -306,6 +306,27 @@
           <!-- Daftar Nama yang Mengantri (Bulan Berjalan) -->
           <div id="list-antrian-beranda" class="mt-3 space-y-2">
              <div class="text-center text-[10px] text-[var(--text-sub)] py-3">Memuat data antrian...</div>
+          </div>
+        </div>
+
+        <!-- Card Tahap Verifikasi: sudah Lulus Kualifikasi dari Gojek, tinggal Sahkan Mitra -->
+        <div class="neu-flat p-5 mt-6">
+          <div class="flex items-center mb-4">
+             <svg class="w-5 h-5 text-[#00e676] mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+             <h3 class="font-bold tracking-wider">TAHAP VERIFIKASI</h3>
+          </div>
+
+          <div class="neu-inset p-4 rounded-xl flex items-center justify-between">
+             <div class="flex items-center">
+                <div class="w-3 h-3 rounded-full bg-[#00e676] mr-3 animate-pulse"></div>
+                <span class="text-sm font-semibold text-[var(--text-sub)] uppercase">Menunggu Sahkan Mitra</span>
+             </div>
+             <span class="text-xl font-bold text-[#00e676]" id="dash-verifikasi">0</span>
+          </div>
+
+          <!-- Daftar Nama yang Lulus Kualifikasi, tinggal Verifikasi/Sahkan Mitra -->
+          <div id="list-verifikasi-beranda" class="mt-3 space-y-2">
+             <div class="text-center text-[10px] text-[var(--text-sub)] py-3">Memuat data verifikasi...</div>
           </div>
         </div>
       </section>
@@ -464,6 +485,12 @@
                <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
                Refresh
             </button>
+         </div>
+
+         <!-- Search Nama Ahli Waris / Alm / Wilayah -->
+         <div class="neu-inset p-3 mb-3 flex items-center gap-2">
+            <svg class="w-4 h-4 text-[var(--text-sub)] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+            <input type="text" id="searchAntrian" oninput="filterListAntrian()" placeholder="Cari nama ahli waris / Alm / wilayah..." class="flex-1 bg-transparent text-sm text-[var(--text-main)] outline-none">
          </div>
 
          <!-- Toolbar Pilih Banyak (khusus status "Antrian") -->
@@ -752,6 +779,7 @@
             cekDuplikatNamaAlm: function(namaAlm) { callApi("cekDuplikatNamaAlm", namaAlm).then(this._success).catch(this._failure); },
             verifyPinTab: function(payload) { callApi("verifyPinTab", payload).then(this._success).catch(this._failure); },
             ajukanKeGojek: function(payload) { callApi("ajukanKeGojek", payload).then(this._success).catch(this._failure); },
+            tandaiBerhalanganVerifikasi: function(payload) { callApi("tandaiBerhalanganVerifikasi", payload).then(this._success).catch(this._failure); },
             ajukanBatchKeGojek: function(payload) { callApi("ajukanBatchKeGojek", payload).then(this._success).catch(this._failure); },
             generateDokumenBatch: function(payload) { callApi("generateDokumenBatch", payload).then(this._success).catch(this._failure); },
             updateHasilGojek: function(payload) { callApi("updateHasilGojek", payload).then(this._success).catch(this._failure); },
@@ -903,6 +931,7 @@
 
     let globalAntrianData = [];
     let globalAntrianBulanIni = [];
+    let globalVerifikasiBulanIni = [];
     let selectedAntrianRowIndexes = new Set();
 
     // Fungsi Format Ukuran File
@@ -1336,6 +1365,35 @@
       }
     }
 
+    // Render daftar & jumlah data yang sudah "Lulus Kualifikasi" (Tahap Verifikasi) di Beranda.
+    // Ikut filter PIC yang sama seperti daftar Antrian, dan tap nama = langsung ke tab Kontrol
+    // Verifikasi (form Sahkan Mitra) untuk orang itu.
+    function renderVerifikasiBeranda() {
+      const picTerpilih = document.getElementById('filterPicBeranda').value;
+      const listVerifikasi = document.getElementById('list-verifikasi-beranda');
+
+      const dataTampil = picTerpilih
+        ? globalVerifikasiBulanIni.filter(item => (item.pic || "").trim() === picTerpilih)
+        : globalVerifikasiBulanIni;
+
+      document.getElementById('dash-verifikasi').innerText = dataTampil.length;
+
+      if (dataTampil.length === 0) {
+        listVerifikasi.innerHTML = `<div class="text-center text-[10px] text-[var(--text-sub)] py-3">${picTerpilih ? 'Tidak ada tahap verifikasi untuk PIC ini.' : 'Belum ada yang masuk tahap verifikasi bulan ini.'}</div>`;
+      } else {
+        listVerifikasi.innerHTML = dataTampil.map(item => `
+          <div onclick="goToVerifikasi('${item.id}')" class="neu-inset p-3 rounded-xl flex items-center justify-between cursor-pointer active:scale-95 transition">
+            <div class="min-w-0 pr-2">
+              <p class="text-xs font-bold text-[var(--text-main)] truncate">${item.namaAhli}</p>
+              <p class="text-sm font-semibold text-[#00e676] truncate">Alm. ${item.namaAlm}</p>
+              <p class="text-[10px] text-[var(--text-sub)] truncate">PIC: ${item.pic || '-'}</p>
+            </div>
+            <span class="text-[10px] px-2 py-1 neu-flat rounded uppercase font-bold text-[#00e676] whitespace-nowrap">${item.wilayah}</span>
+          </div>
+        `).join("");
+      }
+    }
+
     // Ambil Data dari Backend (GAS)
     function loadDataFromServer() {
       toggleLoading(true, "Sinkronisasi Data...");
@@ -1361,12 +1419,16 @@
             // Simpan khusus yang BELUM diajukan ke Gojek (status "Antrian") pada periode berjalan
             // (dipakai ulang saat filter PIC berubah, untuk daftar "Belum Diajukan" di Beranda)
             globalAntrianBulanIni = response.antrian.filter(item => item.periode === response.currentPeriode && item.status === 'Antrian');
+            // Data yang sudah "Lulus Kualifikasi" dari Gojek -- tinggal tahap Verifikasi/Sahkan Mitra.
+            globalVerifikasiBulanIni = response.antrian.filter(item => item.periode === response.currentPeriode && item.status === 'Lulus Kualifikasi');
 
             // Isi dropdown Filter PIC dari nama PIC unik yang muncul di antrian bulan ini
             populateFilterPicBeranda(globalAntrianBulanIni);
 
             // Render Daftar Nama Antrian di Beranda (khusus periode berjalan, selaras dgn dash-antrian)
             renderAntrianBeranda();
+            // Render Daftar Nama Tahap Verifikasi di Beranda
+            renderVerifikasiBeranda();
 
             // Render UI Card untuk Antrian (Lebih Mobile Friendly)
             const listContainer = document.getElementById('list-antrian-mobile');
@@ -1396,7 +1458,11 @@
                   tombolAksi = `<button onclick="ajukanUlang('${item.rowIndex}', '${item.namaAhli}')" class="px-4 py-1.5 rounded-full text-[10px] font-bold text-white bg-[#ff4a5a] shadow-[0_0_10px_rgba(255,74,90,0.5)] active:scale-95 transition">AJUKAN ULANG</button>`;
                 } else if (item.status === 'Lulus Kualifikasi') {
                   badgeStatus = `<span class="text-[9px] px-2 py-0.5 neu-inset rounded uppercase font-bold text-[#00e676]">Lulus Kualifikasi</span>`;
-                  tombolAksi = `<button onclick="goToVerifikasi('${item.id}')" class="px-4 py-1.5 rounded-full text-[10px] font-bold text-white bg-[#00e676] shadow-[0_0_10px_rgba(0,230,118,0.5)] active:scale-95 transition">VERIFIKASI</button>`;
+                  tombolAksi = `
+                    <div class="flex items-center gap-2">
+                      <button onclick="tandaiBerhalangan('${item.rowIndex}', '${item.namaAhli}')" class="px-3 py-1.5 rounded-full text-[10px] font-bold text-[var(--text-sub)] neu-flat active:scale-95 transition">BERHALANGAN</button>
+                      <button onclick="goToVerifikasi('${item.id}')" class="px-4 py-1.5 rounded-full text-[10px] font-bold text-white bg-[#00e676] shadow-[0_0_10px_rgba(0,230,118,0.5)] active:scale-95 transition">VERIFIKASI</button>
+                    </div>`;
                 }
 
                 let isAntrian = item.status === 'Antrian';
@@ -1408,9 +1474,10 @@
                 // biar gampang milih banyak sekaligus tanpa perlu presisi jari nge-tap kotaknya.
                 let cardTapAttr = isAntrian ? `onclick="handleCardTapAntrian(event, '${item.rowIndex}')" role="checkbox" aria-checked="${sudahDipilih}"` : "";
                 let cardHighlight = sudahDipilih ? "ring-2 ring-yellow-500" : "";
+                let searchKey = `${item.namaAhli} ${item.namaAlm} ${item.wilayah}`.toLowerCase();
 
                 listContainer.innerHTML += `
-                  <div id="card-antrian-${item.rowIndex}" class="neu-flat p-4 mb-4 relative overflow-hidden ${cardHighlight} ${isAntrian ? 'cursor-pointer' : ''}" ${cardTapAttr}>
+                  <div id="card-antrian-${item.rowIndex}" data-search="${searchKey}" class="neu-flat p-4 mb-4 relative overflow-hidden ${cardHighlight} ${isAntrian ? 'cursor-pointer' : ''}" ${cardTapAttr}>
                     <div class="absolute top-0 right-0 w-16 h-16 bg-yellow-500 rounded-full filter blur-2xl opacity-10 -mr-5 -mt-5"></div>
                     <div class="flex justify-between items-start mb-2">
                       <div class="flex items-start">
@@ -1441,6 +1508,8 @@
             // Reset seleksi batch tiap kali data di-load ulang, dan sinkronkan tampilan toolbar.
             selectedAntrianRowIndexes.clear();
             updateBatchActionBar();
+            // Terapkan lagi filter pencarian yang sedang diketik (kalau ada), karena list barusan di-render ulang.
+            filterListAntrian();
 
             // Update Dropdown Penyelesaian: hanya data yang sudah "Lulus Kualifikasi" dari Gojek
             // yang boleh lanjut ke tahap verifikasi/sahkan mitra.
@@ -1554,6 +1623,34 @@
     // bukan satu-satu. Admin centang beberapa data "Antrian", lalu 1 tombol sekaligus:
     // (1) generate 1 file Excel berisi data yang dicentang, dan
     // (2) tandai semuanya jadi status "Diajukan ke Gojek".
+    // Cari cepat di tab "Data Antrian" berdasarkan nama ahli waris / nama Alm / wilayah.
+    // Filter murni di sisi browser (tanpa panggil server lagi) supaya responsif.
+    function filterListAntrian() {
+      const keyword = document.getElementById('searchAntrian').value.trim().toLowerCase();
+      const cards = document.querySelectorAll('#list-antrian-mobile > div[data-search]');
+      let jumlahTampil = 0;
+
+      cards.forEach(function (card) {
+        const cocok = !keyword || card.dataset.search.includes(keyword);
+        card.classList.toggle('hidden', !cocok);
+        if (cocok) jumlahTampil++;
+      });
+
+      // Tampilkan pesan "tidak ditemukan" kalau keyword ada isinya tapi nggak ada yang cocok.
+      let pesanKosong = document.getElementById('searchAntrianKosong');
+      if (keyword && jumlahTampil === 0) {
+        if (!pesanKosong) {
+          pesanKosong = document.createElement('div');
+          pesanKosong.id = 'searchAntrianKosong';
+          pesanKosong.className = 'neu-inset p-5 text-center text-[var(--text-sub)] text-xs mt-2';
+          document.getElementById('list-antrian-mobile').appendChild(pesanKosong);
+        }
+        pesanKosong.textContent = `Tidak ada hasil untuk "${document.getElementById('searchAntrian').value}".`;
+      } else if (pesanKosong) {
+        pesanKosong.remove();
+      }
+    }
+
     function toggleSelectAntrian(rowIndex, checked) {
       if (checked) selectedAntrianRowIndexes.add(String(rowIndex));
       else selectedAntrianRowIndexes.delete(String(rowIndex));
@@ -1705,6 +1802,31 @@
           showAlert("System Error: " + err.message, 'error');
         })
         .ajukanUlangGojek({ rowIndex: parseInt(rowIndex) });
+    }
+
+    // Dipakai saat calon mitra yang udah "Lulus Kualifikasi" ternyata berhalangan/
+    // nggak datang pas jadwal verifikasi -- otomatis dijadwalkan ulang 3 bulan ke depan
+    // (statusnya balik jadi "Pending", sama seperti gagal kualifikasi Gojek, cuma catatannya beda).
+    async function tandaiBerhalangan(rowIndex, namaAhli) {
+      const lanjut = await showConfirmModal(`Tandai "${namaAhli}" berhalangan/tidak datang saat verifikasi?\nData akan dijadwalkan ulang otomatis 3 bulan ke depan.`);
+      if (!lanjut) return;
+
+      toggleLoading(true, "Menandai berhalangan...");
+      google.script.run
+        .withSuccessHandler(function(res) {
+          toggleLoading(false);
+          if (res.success) {
+            showAlert(res.message, 'success');
+            loadDataFromServer();
+          } else {
+            showAlert("Error: " + res.message, 'error');
+          }
+        })
+        .withFailureHandler(function(err) {
+          toggleLoading(false);
+          showAlert("System Error: " + err.message, 'error');
+        })
+        .tandaiBerhalanganVerifikasi({ rowIndex: parseInt(rowIndex) });
     }
 
     // Modal Input Hasil Kualifikasi dari Gojek (info diterima admin via WA)
