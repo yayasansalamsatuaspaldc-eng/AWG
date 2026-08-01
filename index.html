@@ -2067,6 +2067,16 @@
     function clearRekapPeriode() {
       document.getElementById('rekapPeriodeBox').classList.add('hidden');
     }
+
+    // === TEMPEL SNIPPET EMBED DI SINI ===
+    (function initEmbedMode() {
+      var params = new URLSearchParams(window.location.search);
+      if (params.get('embed') !== '1') return;
+      var nav = document.querySelector('nav.bottom-nav-safe');
+      if (nav) nav.style.display = 'none';
+    })();
+    // === SAMPAI SINI ===
+
   </script>
 </body>
 </html>
