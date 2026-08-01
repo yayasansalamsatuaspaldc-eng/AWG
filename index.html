@@ -2068,14 +2068,26 @@
       document.getElementById('rekapPeriodeBox').classList.add('hidden');
     }
 
-    // === TEMPEL SNIPPET EMBED DI SINI ===
-    (function initEmbedMode() {
-      var params = new URLSearchParams(window.location.search);
-      if (params.get('embed') !== '1') return;
-      var nav = document.querySelector('nav.bottom-nav-safe');
-      if (nav) nav.style.display = 'none';
-    })();
-    // === SAMPAI SINI ===
+    // =================================================================================
+// MODE EMBED: dipanggil kalau AWG dibuka dari dalam YASSA Hub (?embed=1 di URL).
+// Kalau AWG dibuka langsung (link biasa, bukan dari Hub), fungsi ini tidak
+// melakukan apa-apa, nav tetap tampil normal seperti sekarang.
+// =================================================================================
+(function initEmbedMode() {
+  var params = new URLSearchParams(window.location.search);
+  if (params.get('embed') !== '1') return; // bukan dari Hub, biarkan apa adanya
+
+  var nav = document.querySelector('nav.bottom-nav-safe');
+  if (nav) nav.style.display = 'none';
+
+  // Pindah otomatis ke tab yang diminta Hub, mis. ?tab=registrasi
+  var targetTab = params.get('tab');
+  // Script ini ditaruh di akhir <body>, jadi DOM sudah pasti siap saat baris
+  // ini jalan -- switchTab() bisa langsung dipanggil tanpa nunggu event apapun.
+  if (targetTab && typeof switchTab === 'function') {
+    switchTab(targetTab);
+  }
+})();
 
   </script>
 </body>
