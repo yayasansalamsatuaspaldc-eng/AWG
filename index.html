@@ -997,6 +997,7 @@
     function trySSOdariHub() {
       callAuth("loginWithHubToken", { hubToken: embedHubToken }, false)
         .then(function (res) {
+          toggleLoading(false); // Matikan loading saat sukses
           // Pisahkan try/catch di sini dari .catch() fetch di bawah --
           // supaya kalau SSO-nya sendiri SUKSES tapi ada error lain pas
           // proses sesudahnya (mis. init tampilan), pesannya gak salah
@@ -1008,6 +1009,7 @@
           }
         })
         .catch(function (err) {
+          toggleLoading(false); // Matikan loading saat gagal
           // Ini baru bener-bener SSO/fetch-nya yang gagal (mis. sesi Hub
           // expired) -- fallback ke login manual biar user gak stuck.
           embedHubToken = null;
@@ -1017,10 +1019,15 @@
     }
 
     function initAuth() {
+      // Tampilkan layar loading agar form login tidak mengintip
+      toggleLoading(true, "Menghubungkan ke YASSA Hub...");
+
       // 1) Coba dulu sesi lokal AWG yang mungkin udah ada di tab ini dari
       //    pembukaan menu sebelumnya -- ini yang bikin buka menu ke-2/3/dst
       //    JAUH lebih cepat, gak perlu ulang SSO ke Hub tiap kali.
-      trySesiLokal().catch(function () {
+      trySesiLokal().then(function() {
+        toggleLoading(false);
+      }).catch(function () {
         sessionStorage.removeItem("yassa_token");
         sessionStorage.removeItem("yassa_user");
 
@@ -1033,6 +1040,7 @@
         }
 
         // 3) Bukan embed, atau embed tapi gak ada hubToken -- login manual.
+        toggleLoading(false);
         showLoginScreen();
       });
     }
