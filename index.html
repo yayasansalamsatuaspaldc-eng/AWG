@@ -963,6 +963,21 @@
     }
 
     function initAuth() {
+      // Kalau dibuka embed dari Hub dan bawa hubToken, coba SSO dulu --
+      // jangan langsung nyuruh login manual (lihat initEmbedMode di bawah).
+      if (embedHubToken) {
+        callAuth("loginWithHubToken", { hubToken: embedHubToken }, false)
+          .then(function (res) { onLoginSuccess(res); })
+          .catch(function (err) {
+            // SSO gagal (misal sesi Hub expired) -- fallback ke login manual
+            // biar user gak stuck, tapi kasih tahu alasannya.
+            embedHubToken = null;
+            showLoginScreen();
+            showLoginError("Sesi dari Hub gagal disambungkan (" + err.message + "). Silakan login manual di bawah.");
+          });
+        return;
+      }
+
       const savedToken = sessionStorage.getItem("yassa_token");
       const savedUser = sessionStorage.getItem("yassa_user");
       if (!savedToken || !savedUser) {
@@ -2433,6 +2448,7 @@
 // melakukan apa-apa, nav tetap tampil normal seperti sekarang.
 // =================================================================================
 var embedTargetTab = null; // dipakai showApp() setelah login sukses -- lihat di bawah
+var embedHubToken = null; // dipakai initAuth() buat SSO otomatis dari Hub -- lihat di atas
 
 (function initEmbedMode() {
   var params = new URLSearchParams(window.location.search);
@@ -2448,6 +2464,11 @@ var embedTargetTab = null; // dipakai showApp() setelah login sukses -- lihat di
   // layar login. Cukup simpan targetnya, nanti dieksekusi oleh showApp()
   // SETELAH login/checkSession berhasil.
   embedTargetTab = params.get('tab');
+
+  // hubToken = sesi yang lagi login di Hub, dioper lewat URL waktu overlay
+  // dibuka (lihat openApp() di script Hub). Dipakai initAuth() buat SSO --
+  // biar user gak perlu login manual lagi di dalam AWG.
+  embedHubToken = params.get('hubToken');
 })();
 
   </script>
