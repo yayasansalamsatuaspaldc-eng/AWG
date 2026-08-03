@@ -1166,6 +1166,13 @@
       document.getElementById("appMainContainer").classList.remove("hidden");
       applyRoleMenu();
       initAppAfterLogin();
+      // Kalau AWG dibuka embed dari Hub dengan ?tab=..., baru sekarang pindah
+      // tab-nya -- setelah login/sesi valid, jadi loadDataFromServer() di
+      // dalam switchTab() punya token yang sah (lihat initEmbedMode di bawah).
+      if (embedTargetTab && typeof switchTab === 'function') {
+        switchTab(embedTargetTab);
+        embedTargetTab = null;
+      }
     }
 
     function togglePasswordVisibility(inputId, btn) {
@@ -2425,6 +2432,8 @@
 // Kalau AWG dibuka langsung (link biasa, bukan dari Hub), fungsi ini tidak
 // melakukan apa-apa, nav tetap tampil normal seperti sekarang.
 // =================================================================================
+var embedTargetTab = null; // dipakai showApp() setelah login sukses -- lihat di bawah
+
 (function initEmbedMode() {
   var params = new URLSearchParams(window.location.search);
   if (params.get('embed') !== '1') return; // bukan dari Hub, biarkan apa adanya
@@ -2432,13 +2441,13 @@
   var nav = document.querySelector('nav.bottom-nav-safe');
   if (nav) nav.style.display = 'none';
 
-  // Pindah otomatis ke tab yang diminta Hub, mis. ?tab=registrasi
-  var targetTab = params.get('tab');
-  // Script ini ditaruh di akhir <body>, jadi DOM sudah pasti siap saat baris
-  // ini jalan -- switchTab() bisa langsung dipanggil tanpa nunggu event apapun.
-  if (targetTab && typeof switchTab === 'function') {
-    switchTab(targetTab);
-  }
+  // PENTING: jangan switchTab() di sini -- script ini jalan SEBELUM login
+  // selesai (window.onload/initAuth() belum tentu kelar), jadi kalau langsung
+  // switchTab ke tab yang manggil loadDataFromServer(), request ke backend
+  // bakal gagal (belum ada token sesi) dan overlay loading nyangkut nutupin
+  // layar login. Cukup simpan targetnya, nanti dieksekusi oleh showApp()
+  // SETELAH login/checkSession berhasil.
+  embedTargetTab = params.get('tab');
 })();
 
   </script>
