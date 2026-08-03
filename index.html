@@ -973,54 +973,68 @@
         });
     }
 
-    function initAuth() {
-      // Kalau dibuka embed dari Hub dan bawa hubToken, coba SSO dulu --
-      // jangan langsung nyuruh login manual (lihat initEmbedMode di bawah).
-      if (embedHubToken) {
-        callAuth("loginWithHubToken", { hubToken: embedHubToken }, false)
-          .then(function (res) {
-            // Pisahkan try/catch di sini dari .catch() fetch di bawah --
-            // supaya kalau SSO-nya sendiri SUKSES tapi ada error lain pas
-            // proses sesudahnya (mis. init tampilan), pesannya gak salah
-            // bilang "sesi Hub gagal" (padahal sesinya valid).
-            try {
-              onLoginSuccess(res);
-            } catch (initErr) {
-              showAlert("Login berhasil, tapi ada masalah saat memuat halaman: " + initErr.message + ". Coba tutup lalu buka lagi tab AWG ini.", 'error');
-            }
-          })
-          .catch(function (err) {
-            // Ini baru bener-bener SSO/fetch-nya yang gagal (mis. sesi Hub
-            // expired) -- fallback ke login manual biar user gak stuck.
-            embedHubToken = null;
-            showLoginScreen();
-            showLoginError("Sesi dari Hub gagal disambungkan (" + err.message + "). Silakan login manual di bawah.");
-          });
-        return;
-      }
-
+    // Coba pakai sesi lokal AWG yang udah ada di sessionStorage tab ini
+    // (dari pembukaan sebelumnya) -- 1x panggilan checkSession aja, jauh
+    // lebih cepat daripada SSO 2-lompatan ke Hub. Kalau berhasil, showApp()
+    // langsung; kalau gagal (sesi habis/gak ada), baru lanjut ke SSO
+    // (kalau embed & bawa hubToken) atau layar login manual.
+    function trySesiLokal() {
       const savedToken = sessionStorage.getItem("yassa_token");
       const savedUser = sessionStorage.getItem("yassa_user");
-      if (!savedToken || !savedUser) {
-        showLoginScreen();
-        return;
-      }
+      if (!savedToken || !savedUser) return Promise.reject(new Error("Belum ada sesi lokal."));
       authToken = savedToken;
-      callAuth("checkSession", {}, true)
+      return callAuth("checkSession", {}, true).then(function (res) {
+        currentUser = {
+          username: res.username, email: res.email, nama: res.nama,
+          jabatan: res.jabatan, role: res.role, wilayahAkses: res.wilayahAkses,
+          bolehPrint: res.bolehPrint, fotoUrl: res.fotoUrl,
+        };
+        sessionStorage.setItem("yassa_user", JSON.stringify(currentUser));
+        showApp();
+      });
+    }
+
+    function trySSOdariHub() {
+      callAuth("loginWithHubToken", { hubToken: embedHubToken }, false)
         .then(function (res) {
-          currentUser = {
-            username: res.username, email: res.email, nama: res.nama,
-            jabatan: res.jabatan, role: res.role, wilayahAkses: res.wilayahAkses,
-            bolehPrint: res.bolehPrint, fotoUrl: res.fotoUrl,
-          };
-          sessionStorage.setItem("yassa_user", JSON.stringify(currentUser));
-          showApp();
+          // Pisahkan try/catch di sini dari .catch() fetch di bawah --
+          // supaya kalau SSO-nya sendiri SUKSES tapi ada error lain pas
+          // proses sesudahnya (mis. init tampilan), pesannya gak salah
+          // bilang "sesi Hub gagal" (padahal sesinya valid).
+          try {
+            onLoginSuccess(res);
+          } catch (initErr) {
+            showAlert("Login berhasil, tapi ada masalah saat memuat halaman: " + initErr.message + ". Coba tutup lalu buka lagi tab AWG ini.", 'error');
+          }
         })
-        .catch(function () {
-          sessionStorage.removeItem("yassa_token");
-          sessionStorage.removeItem("yassa_user");
+        .catch(function (err) {
+          // Ini baru bener-bener SSO/fetch-nya yang gagal (mis. sesi Hub
+          // expired) -- fallback ke login manual biar user gak stuck.
+          embedHubToken = null;
           showLoginScreen();
+          showLoginError("Sesi dari Hub gagal disambungkan (" + err.message + "). Silakan login manual di bawah.");
         });
+    }
+
+    function initAuth() {
+      // 1) Coba dulu sesi lokal AWG yang mungkin udah ada di tab ini dari
+      //    pembukaan menu sebelumnya -- ini yang bikin buka menu ke-2/3/dst
+      //    JAUH lebih cepat, gak perlu ulang SSO ke Hub tiap kali.
+      trySesiLokal().catch(function () {
+        sessionStorage.removeItem("yassa_token");
+        sessionStorage.removeItem("yassa_user");
+
+        // 2) Gak ada/gak valid sesi lokal -- kalau ini dibuka embed dari Hub
+        //    dan bawa hubToken, baru lakuin SSO (2 lompatan, agak lebih
+        //    lama, tapi cuma kejadian SEKALI per sesi tab).
+        if (embedHubToken) {
+          trySSOdariHub();
+          return;
+        }
+
+        // 3) Bukan embed, atau embed tapi gak ada hubToken -- login manual.
+        showLoginScreen();
+      });
     }
 
     function showLoginScreen() {
