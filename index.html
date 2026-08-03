@@ -882,9 +882,19 @@
     const GAS_AUTH_URL = API_URL;
     const GOOGLE_CLIENT_ID = "486322853600-bi8cq6k50ajcue26t3sss20mfqmg8me4.apps.googleusercontent.com";
 
-    if (typeof google === 'undefined') {
+    // Pasang shim `google.script.run` kalau BELUM ADA (bukan cuma cek
+    // `typeof google === 'undefined'`). Ini PENTING: skrip Google Identity
+    // Services (buat tombol Login Google) juga bikin `window.google.accounts`,
+    // dan kalau skrip itu udah ke-cache browser (misalnya AWG dibuka embed
+    // di iframe YASSA Hub yang udah lebih dulu load skrip yang sama), dia
+    // bisa jalan DULUAN sebelum baris ini -- bikin `typeof google` udah
+    // bukan 'undefined' walau `google.script.run` sendiri belum pernah
+    // dibikin. Kalau cuma cek `typeof google`, shim di bawah ini bakal
+    // gak jalan sama sekali dan semua pemanggilan google.script.run.xxx()
+    // bakal error "Cannot read properties of undefined (reading 'run')".
+    if (!window.google || !window.google.script || !window.google.script.run) {
       console.warn("Sistem berjalan di GitHub Pages. Jembatan API diaktifkan.");
-      
+
       // Fungsi pengirim data lewat internet -- selalu sertakan token sesi login
       // di level teratas request (dibaca backend sebagai req.token), TERPISAH
       // dari payload, supaya backend bisa requireSession() di semua aksi.
@@ -895,30 +905,31 @@
         }).then(res => res.json());
       }
 
-      // Memanipulasi google.script.run agar aplikasi tidak error dan mengirim data ke API
-      window.google = {
-        script: {
-          run: {
-            withSuccessHandler: function(fn) { this._success = fn; return this; },
-            withFailureHandler: function(fn) { this._failure = fn; return this; },
-            
-            getAppData: function() { callApi("getAppData").then(this._success).catch(this._failure); },
-            getDaftarPeriode: function() { callApi("getDaftarPeriode").then(this._success).catch(this._failure); },
-            getRekapPeriode: function(payload) { callApi("getRekapPeriode", payload).then(this._success).catch(this._failure); },
-            submitRegistrasi: function(payload) { callApi("submitRegistrasi", payload).then(this._success).catch(this._failure); },
-            submitPenyelesaian: function(payload) { callApi("submitPenyelesaian", payload).then(this._success).catch(this._failure); },
-            generateDokumen: function(periode, tipe) { callApi("generateDokumen", { periode, tipe }).then(this._success).catch(this._failure); },
-            cariNamaAlm: function(keyword) { callApi("cariNamaAlm", keyword).then(this._success).catch(this._failure); },
-            cekDuplikatNamaAlm: function(namaAlm) { callApi("cekDuplikatNamaAlm", namaAlm).then(this._success).catch(this._failure); },
-            verifyPinTab: function(payload) { callApi("verifyPinTab", payload).then(this._success).catch(this._failure); },
-            ajukanKeGojek: function(payload) { callApi("ajukanKeGojek", payload).then(this._success).catch(this._failure); },
-            tandaiBerhalanganVerifikasi: function(payload) { callApi("tandaiBerhalanganVerifikasi", payload).then(this._success).catch(this._failure); },
-            ajukanBatchKeGojek: function(payload) { callApi("ajukanBatchKeGojek", payload).then(this._success).catch(this._failure); },
-            generateDokumenBatch: function(payload) { callApi("generateDokumenBatch", payload).then(this._success).catch(this._failure); },
-            updateHasilGojek: function(payload) { callApi("updateHasilGojek", payload).then(this._success).catch(this._failure); },
-            ajukanUlangGojek: function(payload) { callApi("ajukanUlangGojek", payload).then(this._success).catch(this._failure); },
-            getSyaratDokumen: function() { callApi("getSyaratDokumen").then(this._success).catch(this._failure); }
-          }
+      // Memanipulasi google.script.run agar aplikasi tidak error dan mengirim data ke API.
+      // window.google = window.google || {} DULU (bukan langsung timpa) biar
+      // gak ngerusak window.google.accounts kalau GSI udah lebih dulu bikin itu.
+      window.google = window.google || {};
+      window.google.script = {
+        run: {
+          withSuccessHandler: function(fn) { this._success = fn; return this; },
+          withFailureHandler: function(fn) { this._failure = fn; return this; },
+          
+          getAppData: function() { callApi("getAppData").then(this._success).catch(this._failure); },
+          getDaftarPeriode: function() { callApi("getDaftarPeriode").then(this._success).catch(this._failure); },
+          getRekapPeriode: function(payload) { callApi("getRekapPeriode", payload).then(this._success).catch(this._failure); },
+          submitRegistrasi: function(payload) { callApi("submitRegistrasi", payload).then(this._success).catch(this._failure); },
+          submitPenyelesaian: function(payload) { callApi("submitPenyelesaian", payload).then(this._success).catch(this._failure); },
+          generateDokumen: function(periode, tipe) { callApi("generateDokumen", { periode, tipe }).then(this._success).catch(this._failure); },
+          cariNamaAlm: function(keyword) { callApi("cariNamaAlm", keyword).then(this._success).catch(this._failure); },
+          cekDuplikatNamaAlm: function(namaAlm) { callApi("cekDuplikatNamaAlm", namaAlm).then(this._success).catch(this._failure); },
+          verifyPinTab: function(payload) { callApi("verifyPinTab", payload).then(this._success).catch(this._failure); },
+          ajukanKeGojek: function(payload) { callApi("ajukanKeGojek", payload).then(this._success).catch(this._failure); },
+          tandaiBerhalanganVerifikasi: function(payload) { callApi("tandaiBerhalanganVerifikasi", payload).then(this._success).catch(this._failure); },
+          ajukanBatchKeGojek: function(payload) { callApi("ajukanBatchKeGojek", payload).then(this._success).catch(this._failure); },
+          generateDokumenBatch: function(payload) { callApi("generateDokumenBatch", payload).then(this._success).catch(this._failure); },
+          updateHasilGojek: function(payload) { callApi("updateHasilGojek", payload).then(this._success).catch(this._failure); },
+          ajukanUlangGojek: function(payload) { callApi("ajukanUlangGojek", payload).then(this._success).catch(this._failure); },
+          getSyaratDokumen: function() { callApi("getSyaratDokumen").then(this._success).catch(this._failure); }
         }
       };
     }
@@ -967,10 +978,20 @@
       // jangan langsung nyuruh login manual (lihat initEmbedMode di bawah).
       if (embedHubToken) {
         callAuth("loginWithHubToken", { hubToken: embedHubToken }, false)
-          .then(function (res) { onLoginSuccess(res); })
+          .then(function (res) {
+            // Pisahkan try/catch di sini dari .catch() fetch di bawah --
+            // supaya kalau SSO-nya sendiri SUKSES tapi ada error lain pas
+            // proses sesudahnya (mis. init tampilan), pesannya gak salah
+            // bilang "sesi Hub gagal" (padahal sesinya valid).
+            try {
+              onLoginSuccess(res);
+            } catch (initErr) {
+              showAlert("Login berhasil, tapi ada masalah saat memuat halaman: " + initErr.message + ". Coba tutup lalu buka lagi tab AWG ini.", 'error');
+            }
+          })
           .catch(function (err) {
-            // SSO gagal (misal sesi Hub expired) -- fallback ke login manual
-            // biar user gak stuck, tapi kasih tahu alasannya.
+            // Ini baru bener-bener SSO/fetch-nya yang gagal (mis. sesi Hub
+            // expired) -- fallback ke login manual biar user gak stuck.
             embedHubToken = null;
             showLoginScreen();
             showLoginError("Sesi dari Hub gagal disambungkan (" + err.message + "). Silakan login manual di bawah.");
