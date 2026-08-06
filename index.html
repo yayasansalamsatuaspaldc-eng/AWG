@@ -2512,6 +2512,23 @@ var embedHubToken = null; // dipakai initAuth() buat SSO otomatis dari Hub -- li
   // dibuka (lihat openApp() di script Hub). Dipakai initAuth() buat SSO --
   // biar user gak perlu login manual lagi di dalam AWG.
   embedHubToken = params.get('hubToken');
+
+  // Terima perintah pindah tab dari YASSA Hub lewat postMessage, dipakai
+  // SETELAH app ini kebuka & login sukses -- biar ganti menu antar tab AWG
+  // (dari luar overlay Hub yang sama) gak perlu reload/login ulang dari nol.
+  // Sengaja tetap lewat switchTab() (bukan switchTabInternal langsung) biar
+  // proteksi PIN (Data Baru/Print Data) & filter Role tetap kepakai normal
+  // walau navigasinya dari Hub.
+  var ALLOWED_HUB_ORIGINS = ['https://yayasansalamsatuaspaldc-eng.github.io'];
+  var VALID_TABS_EMBED = ['dashboard', 'registrasi', 'penyelesaian', 'antrian', 'export'];
+  window.addEventListener('message', function (e) {
+    if (ALLOWED_HUB_ORIGINS.indexOf(e.origin) === -1) return;
+    var msg = e.data;
+    if (!msg || msg.type !== 'YASSA_HUB_NAVIGATE') return;
+    if (!currentUser) return; // belum login, abaikan
+    if (VALID_TABS_EMBED.indexOf(msg.tab) === -1) return;
+    switchTab(msg.tab);
+  });
 })();
 
   </script>
