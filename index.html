@@ -962,18 +962,83 @@
 
     // Panggil auth ke GAS_AUTH_URL langsung (di luar shim google.script.run,
     // karena login/checkSession/dst belum tentu perlu token yang sudah ada).
-    function callAuth(action, payload, includeToken) {
+    // Error dari jaringan (sinyal putus, timeout, respons bukan JSON karena
+    // GAS lagi lambat/overload) diberi tanda err.isNetwork = true -- BEDA dari
+    // error "ditolak server" (sesi habis, akun nonaktif, dst). Pembedaan ini
+    // dipakai initAuth() supaya sinyal jelek TIDAK langsung dianggap sesi habis
+    // dan melempar user ke layar login.
+    function callAuth(action, payload, includeToken, timeoutMs) {
       const body = { action: action, payload: payload || {} };
       if (includeToken) body.token = authToken;
+      const ctrl = (typeof AbortController !== "undefined") ? new AbortController() : null;
+      const timer = ctrl ? setTimeout(function () { ctrl.abort(); }, timeoutMs || 30000) : null;
       return fetch(GAS_AUTH_URL, {
         method: "POST",
-        body: JSON.stringify(body)
+        body: JSON.stringify(body),
+        signal: ctrl ? ctrl.signal : undefined
       })
         .then(function (r) { return r.json(); })
         .then(function (res) {
-          if (!res.success) throw new Error(res.message || "Terjadi kesalahan.");
+          if (timer) clearTimeout(timer);
+          if (!res.success) {
+            const e = new Error(res.message || "Terjadi kesalahan.");
+            e.isServerReject = true;
+            throw e;
+          }
           return res;
+        })
+        .catch(function (err) {
+          if (timer) clearTimeout(timer);
+          if (!err.isServerReject) {
+            err.isNetwork = true;
+            err.message = "Koneksi lemah atau terputus. Coba lagi sebentar.";
+          }
+          throw err;
         });
+    }
+
+    // Sama seperti callAuth tapi otomatis coba ulang (maks 3x) KHUSUS kalau
+    // gagalnya karena jaringan. Aman dipakai ulang untuk checkSession &
+    // loginWithHubToken (keduanya tidak sekali-pakai).
+    function callAuthRetry(action, payload, includeToken, maxTry) {
+      maxTry = maxTry || 3;
+      let n = 0;
+      const jalan = function () {
+        n++;
+        return callAuth(action, payload, includeToken, 20000).catch(function (err) {
+          if (err.isNetwork && n < maxTry) {
+            toggleLoading(true, "Sinyal lemah, mencoba lagi (" + (n + 1) + "/" + maxTry + ")...");
+            return new Promise(function (r) { setTimeout(r, 1500 * n); }).then(jalan);
+          }
+          throw err;
+        });
+      };
+      return jalan();
+    }
+
+    // Layar "koneksi gagal" -- dipakai kalau sudah dicoba ulang tapi sinyal
+    // tetap jelek. Sesi/hubToken sengaja DIPERTAHANKAN, jadi cukup tekan
+    // "Coba Lagi" tanpa login ulang.
+    function tampilkanKoneksiGagal_() {
+      toggleLoading(false);
+      let el = document.getElementById("koneksiGagalBox");
+      if (!el) {
+        el = document.createElement("div");
+        el.id = "koneksiGagalBox";
+        el.style.cssText = "position:fixed;inset:0;z-index:95;display:flex;align-items:center;justify-content:center;padding:24px;background:var(--bg-color);";
+        el.innerHTML =
+          '<div style="max-width:320px;text-align:center;">' +
+          '<div style="font-size:15px;font-weight:700;color:var(--text-main,#fff);margin-bottom:8px;">Sinyal kurang stabil</div>' +
+          '<div style="font-size:12px;line-height:1.5;color:var(--text-sub,#aaa);margin-bottom:16px;">Belum bisa terhubung ke server. Sesi kamu tetap aman, tidak perlu login ulang. Pindah ke tempat dengan sinyal lebih baik, lalu coba lagi.</div>' +
+          '<button type="button" id="koneksiGagalBtn" style="padding:10px 22px;border-radius:12px;border:0;background:#22c55e;color:#fff;font-weight:700;font-size:13px;cursor:pointer;">Coba Lagi</button>' +
+          '</div>';
+        document.body.appendChild(el);
+        document.getElementById("koneksiGagalBtn").onclick = function () {
+          el.style.display = "none";
+          initAuth();
+        };
+      }
+      el.style.display = "flex";
     }
 
     // Coba pakai sesi lokal AWG yang udah ada di sessionStorage tab ini
@@ -986,7 +1051,7 @@
       const savedUser = sessionStorage.getItem("yassa_user");
       if (!savedToken || !savedUser) return Promise.reject(new Error("Belum ada sesi lokal."));
       authToken = savedToken;
-      return callAuth("checkSession", {}, true).then(function (res) {
+      return callAuthRetry("checkSession", {}, true).then(function (res) {
         currentUser = {
           username: res.username, email: res.email, nama: res.nama,
           jabatan: res.jabatan, role: res.role, wilayahAkses: res.wilayahAkses,
@@ -998,7 +1063,7 @@
     }
 
     function trySSOdariHub() {
-      callAuth("loginWithHubToken", { hubToken: embedHubToken }, false)
+      callAuthRetry("loginWithHubToken", { hubToken: embedHubToken }, false)
         .then(function (res) {
           toggleLoading(false); // Matikan loading saat sukses
           // Pisahkan try/catch di sini dari .catch() fetch di bawah --
@@ -1013,7 +1078,10 @@
         })
         .catch(function (err) {
           toggleLoading(false); // Matikan loading saat gagal
-          // Ini baru bener-bener SSO/fetch-nya yang gagal (mis. sesi Hub
+          // Gagal gara-gara sinyal (sudah dicoba ulang 3x)? Jangan lempar ke
+          // login manual -- sesi Hub-nya masih valid. Tawarkan "Coba Lagi".
+          if (err && err.isNetwork) { tampilkanKoneksiGagal_(); return; }
+          // Ini baru bener-bener SSO yang DITOLAK server (mis. sesi Hub
           // expired) -- fallback ke login manual biar user gak stuck.
           embedHubToken = null;
           showLoginScreen();
@@ -1030,7 +1098,10 @@
       //    JAUH lebih cepat, gak perlu ulang SSO ke Hub tiap kali.
       trySesiLokal().then(function() {
         toggleLoading(false);
-      }).catch(function () {
+      }).catch(function (err) {
+        // Sinyal jelek (bukan sesi habis): pertahankan sesi lokal, tawarkan
+        // "Coba Lagi" -- jangan sampai user dilempar ke login manual.
+        if (err && err.isNetwork) { tampilkanKoneksiGagal_(); return; }
         sessionStorage.removeItem("yassa_token");
         sessionStorage.removeItem("yassa_user");
 
