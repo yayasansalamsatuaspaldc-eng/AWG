@@ -838,19 +838,6 @@
     </div>
   </div>
 
-  <!-- Modal PIN Custom, dipakai untuk proteksi akses tab Data Baru -->
-  <div id="customPinOverlay" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] hidden items-center justify-center p-6">
-    <div class="neu-flat max-w-sm w-full p-6 rounded-2xl">
-      <div class="w-12 h-12 mx-auto mb-3 rounded-full flex items-center justify-center text-xl font-bold bg-blue-500/15 text-blue-400">🔒</div>
-      <p id="customPinMessage" class="text-center text-sm text-[var(--text-main)] mb-4">Masukkan PIN untuk membuka halaman ini</p>
-      <input type="password" id="customPinInput" inputmode="text" autocomplete="off" placeholder="PIN" class="neu-inset w-full text-center text-lg tracking-widest font-bold py-3 rounded-xl mb-5 text-[var(--text-main)] bg-transparent outline-none">
-      <div class="flex gap-3">
-        <button id="customPinCancelBtn" class="flex-1 neu-flat py-3 rounded-xl font-bold text-sm text-[var(--text-sub)] active:scale-95 transition">Batal</button>
-        <button id="customPinOkBtn" class="flex-1 neu-flat py-3 rounded-xl font-bold text-sm text-blue-400 active:scale-95 transition">Buka</button>
-      </div>
-    </div>
-  </div>
-
   <!-- Modal Hasil Kualifikasi Gojek, dipakai saat admin dapat kabar dari Gojek (via WA) -->
   <div id="customHasilGojekOverlay" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] hidden items-center justify-center p-6">
     <div class="neu-flat max-w-sm w-full p-6 rounded-2xl">
@@ -922,7 +909,6 @@
           generateDokumen: function(periode, tipe) { callApi("generateDokumen", { periode, tipe }).then(this._success).catch(this._failure); },
           cariNamaAlm: function(keyword) { callApi("cariNamaAlm", keyword).then(this._success).catch(this._failure); },
           cekDuplikatNamaAlm: function(namaAlm) { callApi("cekDuplikatNamaAlm", namaAlm).then(this._success).catch(this._failure); },
-          verifyPinTab: function(payload) { callApi("verifyPinTab", payload).then(this._success).catch(this._failure); },
           ajukanKeGojek: function(payload) { callApi("ajukanKeGojek", payload).then(this._success).catch(this._failure); },
           tandaiBerhalanganVerifikasi: function(payload) { callApi("tandaiBerhalanganVerifikasi", payload).then(this._success).catch(this._failure); },
           ajukanBatchKeGojek: function(payload) { callApi("ajukanBatchKeGojek", payload).then(this._success).catch(this._failure); },
@@ -953,8 +939,25 @@
       TIMKERJA:   ["dashboard", "antrian"],
     };
 
+    // Pengecualian: user tertentu (Korwil) yang menu "Data Baru"-nya dibuka.
+    // Dicocokkan ke Username ATAU Nama (huruf besar/kecil & tanda baca diabaikan).
+    // HARUS sama dengan USER_BOLEH_DATA_BARU di Code.gs AWG (server yang
+    // memutuskan sebenarnya; ini cuma tampilan menu).
+    const USER_BOLEH_DATA_BARU = ["Hamdani", "Ando ABD. Rahman"];
+    function normalisasiIdentitas_(s) {
+      return String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+    }
+    function userBolehDataBaru_() {
+      if (!currentUser) return false;
+      const daftar = USER_BOLEH_DATA_BARU.map(normalisasiIdentitas_);
+      return daftar.indexOf(normalisasiIdentitas_(currentUser.username)) !== -1 ||
+             daftar.indexOf(normalisasiIdentitas_(currentUser.nama)) !== -1;
+    }
+
     function getAllowedTabsForRole(role) {
-      return ROLE_MENU_MAP[String(role || "").toUpperCase()] || ["dashboard"];
+      const tabs = (ROLE_MENU_MAP[String(role || "").toUpperCase()] || ["dashboard"]).slice();
+      if (tabs.indexOf("registrasi") === -1 && userBolehDataBaru_()) tabs.push("registrasi");
+      return tabs;
     }
 
     // Panggil auth ke GAS_AUTH_URL langsung (di luar shim google.script.run,
@@ -1301,41 +1304,6 @@
       });
     }
 
-    // --- Modal PIN Custom ---
-    // Mengembalikan Promise<string|null>: string PIN yang diketik user jika ditekan "Buka",
-    // atau null jika user menekan "Batal".
-    function showPinModal(message) {
-      return new Promise((resolve) => {
-        const overlay = document.getElementById('customPinOverlay');
-        const msgEl = document.getElementById('customPinMessage');
-        const input = document.getElementById('customPinInput');
-        const okBtn = document.getElementById('customPinOkBtn');
-        const cancelBtn = document.getElementById('customPinCancelBtn');
-
-        msgEl.textContent = message;
-        input.value = "";
-        overlay.classList.remove('hidden');
-        overlay.classList.add('flex');
-        setTimeout(() => input.focus(), 100);
-
-        function selesai(hasil) {
-          overlay.classList.add('hidden');
-          overlay.classList.remove('flex');
-          okBtn.removeEventListener('click', onOk);
-          cancelBtn.removeEventListener('click', onCancel);
-          input.removeEventListener('keydown', onKeydown);
-          resolve(hasil);
-        }
-        function onOk() { selesai(input.value); }
-        function onCancel() { selesai(null); }
-        function onKeydown(e) { if (e.key === 'Enter') onOk(); }
-
-        okBtn.addEventListener('click', onOk);
-        cancelBtn.addEventListener('click', onCancel);
-        input.addEventListener('keydown', onKeydown);
-      });
-    }
-
     // Cek Nama Alm ke Database Utama (Sheet) & Data Stop Santunan (Doc)
     function cekNamaAlm() {
       const q = document.getElementById('cekNamaAlmInput').value.trim();
@@ -1545,11 +1513,6 @@
       });
     }
 
-    // CATATAN KEAMANAN: PIN tab TIDAK disimpan di file ini (index.html) lagi.
-    // PIN asli hanya ada di Code.gs (server). Frontend cuma mengirim PIN yang
-    // diketik user ke server untuk dicocokkan, lalu server membalas true/false
-    // saja -- jadi PIN tidak bisa dilihat lewat "View Page Source" / DevTools.
-
     // Fungsi Navigasi Tab Bottom Nav
     function switchTab(tabId) {
       // Jaga-jaga (pertahanan berlapis): kalau tab ini gak ada di menu Role
@@ -1564,44 +1527,10 @@
           return;
         }
       }
-      // Tab "Data Baru" (registrasi) & "Print Data" (export) diproteksi PIN:
-      // tampilkan modal PIN dulu, baru pindah tab kalau PIN terverifikasi benar.
-      if (tabId === 'registrasi') {
-        mintaPinTab('registrasi', 'Masukkan PIN untuk membuka Data Baru');
-        return;
-      }
-      if (tabId === 'export') {
-        mintaPinTab('export', 'Masukkan PIN untuk membuka Print Data');
-        return;
-      }
       switchTabInternal(tabId);
     }
 
-    // Fungsi umum: tampilkan modal PIN, lalu kirim ke Code.gs (verifyPinTab)
-    // untuk dicocokkan di server. tabId di sini juga dipakai backend untuk
-    // menentukan PIN mana yang harus dicocokkan (lihat objek PIN_TAB di Code.gs).
-    async function mintaPinTab(tabId, pesanModal) {
-      const pin = await showPinModal(pesanModal);
-      if (pin === null) return; // User menekan Batal
-
-      toggleLoading(true, "Memeriksa PIN...");
-      google.script.run
-        .withSuccessHandler(function (res) {
-          toggleLoading(false);
-          if (res && res.success && res.valid) {
-            switchTabInternal(tabId);
-          } else {
-            showAlert("PIN salah. Akses ditolak.", 'error');
-          }
-        })
-        .withFailureHandler(function (err) {
-          toggleLoading(false);
-          showAlert("Gagal memeriksa PIN: " + (err && err.message ? err.message : err), 'error');
-        })
-        .verifyPinTab({ tab: tabId, pin: pin });
-    }
-
-    // Proses inti perpindahan tab (dipanggil setelah lolos proteksi PIN bila perlu)
+    // Proses inti perpindahan tab (dipanggil dari switchTab)
     function switchTabInternal(tabId) {
       // Sembunyikan semua tab
       document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
@@ -2517,7 +2446,7 @@ var embedHubToken = null; // dipakai initAuth() buat SSO otomatis dari Hub -- li
   // SETELAH app ini kebuka & login sukses -- biar ganti menu antar tab AWG
   // (dari luar overlay Hub yang sama) gak perlu reload/login ulang dari nol.
   // Sengaja tetap lewat switchTab() (bukan switchTabInternal langsung) biar
-  // proteksi PIN (Data Baru/Print Data) & filter Role tetap kepakai normal
+  // filter Role tetap kepakai normal
   // walau navigasinya dari Hub.
   var ALLOWED_HUB_ORIGINS = ['https://yayasansalamsatuaspaldc-eng.github.io'];
   var VALID_TABS_EMBED = ['dashboard', 'registrasi', 'penyelesaian', 'antrian', 'export'];
