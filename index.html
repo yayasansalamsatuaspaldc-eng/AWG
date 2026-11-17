@@ -283,9 +283,9 @@
           <div class="absolute top-0 right-0 w-24 h-24 bg-[#00e676] rounded-full filter blur-3xl opacity-20 -mr-10 -mt-10"></div>
           <div class="flex items-center mb-1">
             <svg class="w-6 h-6 text-yellow-500 mr-2" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z" clip-rule="evenodd"></path></svg>
-            <h2 class="font-bold text-lg tracking-wider">PERIODE <span id="dash-periode" class="text-yellow-500">...</span></h2>
+            <h2 class="font-bold text-lg tracking-wider">PERIODE <select id="dash-periode" onchange="gantiPeriodeBeranda(this.value)" class="text-yellow-500 font-bold bg-transparent cursor-pointer outline-none" style="width:auto;padding:0 2px;background:transparent;box-shadow:none;border:none;"><option value="">...</option></select></h2>
           </div>
-          <p class="text-xs text-[var(--text-sub)]">Ringkasan pendaftaran mitra ahli waris bulan ini.</p>
+          <p class="text-xs text-[var(--text-sub)]">Ringkasan pendaftaran mitra ahli waris periode ini. Ganti periode lewat judul di atas.</p>
           <button onclick="switchTab('export')" class="mt-3 text-[10px] font-bold text-blue-400 flex items-center">
              Lihat Rekap Periode Lain
              <svg class="w-3 h-3 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
@@ -301,7 +301,7 @@
                TOTAL DATA
              </div>
              <div class="text-4xl font-bold text-[#00e676] glow-green text-center" id="dash-total">0</div>
-             <div class="text-[10px] text-center mt-2 text-[var(--text-sub)] uppercase">BULAN INI</div>
+             <div class="text-[10px] text-center mt-2 text-[var(--text-sub)] uppercase">PERIODE INI</div>
           </div>
           
           <!-- Card Berhasil -->
@@ -311,7 +311,7 @@
               BERHASIL
             </div>
             <div class="text-4xl font-bold text-[#ff4a5a] glow-red text-center" id="dash-berhasil">0</div>
-            <div class="text-[10px] text-center mt-2 text-[var(--text-sub)] uppercase">BULAN INI</div>
+            <div class="text-[10px] text-center mt-2 text-[var(--text-sub)] uppercase">PERIODE INI</div>
          </div>
         </div>
 
@@ -331,7 +331,7 @@
               <span class="text-2xl font-bold text-blue-400" id="dash-jalur-nongopay">0</span>
             </div>
           </div>
-          <div class="text-[10px] text-center mt-3 text-[var(--text-sub)] uppercase">BULAN INI</div>
+          <div class="text-[10px] text-center mt-3 text-[var(--text-sub)] uppercase">PERIODE INI</div>
         </div>
 
         <!-- Filter PIC -->
@@ -362,7 +362,7 @@
               <span class="text-xl font-bold text-[#00e676]" id="dash-lulus">0</span>
             </div>
           </div>
-          <div class="text-[10px] text-center mt-3 text-[var(--text-sub)] uppercase">BULAN INI</div>
+          <div class="text-[10px] text-center mt-3 text-[var(--text-sub)] uppercase">PERIODE INI</div>
         </div>
 
         <!-- Card Antrian Bar -->
@@ -838,6 +838,25 @@
     </div>
   </div>
 
+  <!-- Modal Edit Data Dasar (nama & nomor HP) -->
+  <div id="editDataOverlay" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] hidden items-center justify-center p-6">
+    <div class="neu-flat max-w-sm w-full p-6 rounded-2xl">
+      <p class="text-center text-sm text-[var(--text-main)] mb-4 font-bold">EDIT DATA</p>
+      <div class="neu-inset p-3 mb-3"><label class="block text-[10px] text-[var(--text-sub)] uppercase font-bold mb-1 px-1">Nama Almarhum/ah</label>
+        <input type="text" id="editNamaAlm" class="px-1 font-semibold text-[var(--text-main)]"></div>
+      <div class="neu-inset p-3 mb-3"><label class="block text-[10px] text-[var(--text-sub)] uppercase font-bold mb-1 px-1">No HP Almarhum/ah</label>
+        <input type="tel" id="editHpAlm" class="px-1 text-[var(--text-main)]"></div>
+      <div class="neu-inset p-3 mb-3"><label class="block text-[10px] text-[var(--text-sub)] uppercase font-bold mb-1 px-1">Nama Ahli Waris</label>
+        <input type="text" id="editNamaAhli" class="px-1 font-bold text-[var(--text-main)]"></div>
+      <div class="neu-inset p-3 mb-4"><label class="block text-[10px] text-[var(--text-sub)] uppercase font-bold mb-1 px-1">No HP Ahli Waris</label>
+        <input type="tel" id="editHpAhli" class="px-1 text-[var(--text-main)]"></div>
+      <div class="flex gap-3">
+        <button onclick="tutupModalEditData()" class="flex-1 neu-flat py-3 rounded-xl font-bold text-sm text-[var(--text-sub)] active:scale-95 transition">Batal</button>
+        <button onclick="simpanEditData()" class="flex-1 neu-flat py-3 rounded-xl font-bold text-sm text-[#00e676] active:scale-95 transition">SIMPAN</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal Hasil Kualifikasi Gojek, dipakai saat admin dapat kabar dari Gojek (via WA) -->
   <div id="customHasilGojekOverlay" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] hidden items-center justify-center p-6">
     <div class="neu-flat max-w-sm w-full p-6 rounded-2xl">
@@ -901,7 +920,7 @@
           withSuccessHandler: function(fn) { this._success = fn; return this; },
           withFailureHandler: function(fn) { this._failure = fn; return this; },
           
-          getAppData: function() { callApi("getAppData").then(this._success).catch(this._failure); },
+          getAppData: function(payload) { callApi("getAppData", payload).then(this._success).catch(this._failure); },
           getDaftarPeriode: function() { callApi("getDaftarPeriode").then(this._success).catch(this._failure); },
           getRekapPeriode: function(payload) { callApi("getRekapPeriode", payload).then(this._success).catch(this._failure); },
           submitRegistrasi: function(payload) { callApi("submitRegistrasi", payload).then(this._success).catch(this._failure); },
@@ -909,6 +928,8 @@
           generateDokumen: function(periode, tipe) { callApi("generateDokumen", { periode, tipe }).then(this._success).catch(this._failure); },
           cariNamaAlm: function(keyword) { callApi("cariNamaAlm", keyword).then(this._success).catch(this._failure); },
           cekDuplikatNamaAlm: function(namaAlm) { callApi("cekDuplikatNamaAlm", namaAlm).then(this._success).catch(this._failure); },
+          editDataDasar: function(payload) { callApi("editDataDasar", payload).then(this._success).catch(this._failure); },
+          uploadKtpSusulan: function(payload) { callApi("uploadKtpSusulan", payload).then(this._success).catch(this._failure); },
           ajukanKeGojek: function(payload) { callApi("ajukanKeGojek", payload).then(this._success).catch(this._failure); },
           tandaiBerhalanganVerifikasi: function(payload) { callApi("tandaiBerhalanganVerifikasi", payload).then(this._success).catch(this._failure); },
           ajukanBatchKeGojek: function(payload) { callApi("ajukanBatchKeGojek", payload).then(this._success).catch(this._failure); },
@@ -1677,10 +1698,55 @@
 
     // Isi dropdown Periode Export dari data yang benar-benar ada di sheet,
     // supaya admin tidak bisa memilih periode yang datanya kosong.
+    // --- Periode Beranda: default = bulan berjalan, tapi admin bisa pilih periode lain
+    // (mis. Februari 2027 untuk data yang diinput lebih awal). Pilihan diingat di browser.
+    let periodeBerandaDipilih = null;
+    let periodeBerjalanServer = "";
+    let daftarPeriodeServer = [];
+    try { periodeBerandaDipilih = localStorage.getItem('awg_periode_beranda') || null; } catch (e) {}
+
+    function renderPeriodeBeranda() {
+      const select = document.getElementById('dash-periode');
+      if (!select) return;
+      const monthNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+      const aktif = periodeBerandaDipilih || periodeBerjalanServer;
+      const set = new Set();
+      const now = new Date();
+      for (let offset = -6; offset <= 12; offset++) {
+        const d = new Date(now.getFullYear(), now.getMonth() + offset, 1);
+        set.add(monthNames[d.getMonth()] + " " + d.getFullYear());
+      }
+      daftarPeriodeServer.forEach(p => set.add(p));
+      if (aktif) set.add(aktif);
+      const urut = Array.from(set).sort((a, b) => {
+        const pa = a.split(" "), pb = b.split(" ");
+        return new Date(parseInt(pa[1]), monthNames.indexOf(pa[0])) - new Date(parseInt(pb[1]), monthNames.indexOf(pb[0]));
+      });
+      select.innerHTML = "";
+      urut.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p; opt.text = p;
+        opt.className = "bg-[var(--card-bg)] text-black";
+        if (p === aktif) opt.selected = true;
+        select.appendChild(opt);
+      });
+    }
+
+    function gantiPeriodeBeranda(nilai) {
+      if (!nilai) return;
+      periodeBerandaDipilih = (nilai === periodeBerjalanServer) ? null : nilai;
+      try {
+        if (periodeBerandaDipilih) localStorage.setItem('awg_periode_beranda', periodeBerandaDipilih);
+        else localStorage.removeItem('awg_periode_beranda');
+      } catch (e) {}
+      loadDataFromServer();
+    }
+
     function loadDaftarPeriodeExport() {
       const select = document.getElementById('expPeriode');
       google.script.run
         .withSuccessHandler(function(res) {
+          if (res.success) { daftarPeriodeServer = res.periodeList || []; renderPeriodeBeranda(); }
           select.innerHTML = "";
           if (res.success && res.periodeList.length > 0) {
             res.periodeList.forEach(p => {
@@ -1865,6 +1931,86 @@
       }
     }
 
+    // Tombol Upload/Ganti KTP di kartu antrian -- hanya untuk user yang boleh Data Baru.
+    function tombolKtpHtml(item) {
+      if (!currentUser || getAllowedTabsForRole(currentUser.role).indexOf("registrasi") === -1) return "";
+      const ada = !!item.urlKtp;
+      const lihat = ada ? `<a href="${item.urlKtp}" target="_blank" rel="noopener" onclick="event.stopPropagation()" class="text-[10px] font-bold text-blue-400 mr-3">LIHAT KTP</a>` : "";
+      const label = ada ? "GANTI KTP" : "UPLOAD KTP";
+      const warna = ada ? "text-[var(--text-sub)]" : "text-yellow-500";
+      const info = ada ? "" : `<span class="text-[10px] text-[#ff4a5a] mr-3">Foto KTP belum ada</span>`;
+      return `<div class="flex items-center mt-3" onclick="event.stopPropagation()">${info}${lihat}
+        <button onclick="bukaModalEditData('${item.rowIndex}')" class="px-3 py-1 mr-2 rounded-full text-[10px] font-bold neu-flat text-blue-400 active:scale-95 transition">EDIT DATA</button>
+        <label class="px-3 py-1 rounded-full text-[10px] font-bold neu-flat ${warna} active:scale-95 transition cursor-pointer">${label}
+          <input type="file" accept="image/jpeg, image/png, image/jpg" class="hidden" onchange="uploadKtpSusulan('${item.rowIndex}', '${String(item.namaAhli).replace(/'/g, "\\'")}', this)">
+        </label></div>`;
+    }
+
+    let editDataRowIndex = null;
+    function bukaModalEditData(rowIndex) {
+      const item = (globalAntrianData || []).find(x => String(x.rowIndex) === String(rowIndex));
+      if (!item) return showAlert("Data tidak ditemukan, coba refresh.", 'warning');
+      editDataRowIndex = rowIndex;
+      document.getElementById('editNamaAlm').value = item.namaAlm || "";
+      document.getElementById('editHpAlm').value = item.hpAlm || "";
+      document.getElementById('editNamaAhli').value = item.namaAhli || "";
+      document.getElementById('editHpAhli').value = item.hpAhli || "";
+      const o = document.getElementById('editDataOverlay');
+      o.classList.remove('hidden'); o.classList.add('flex');
+    }
+    function tutupModalEditData() {
+      const o = document.getElementById('editDataOverlay');
+      o.classList.add('hidden'); o.classList.remove('flex');
+      editDataRowIndex = null;
+    }
+    function simpanEditData() {
+      if (!editDataRowIndex) return;
+      const payload = {
+        rowIndex: parseInt(editDataRowIndex),
+        namaAlm: document.getElementById('editNamaAlm').value.trim(),
+        hpAlm: document.getElementById('editHpAlm').value,
+        namaAhli: document.getElementById('editNamaAhli').value.trim(),
+        hpAhli: document.getElementById('editHpAhli').value
+      };
+      if (!payload.namaAlm || !payload.namaAhli) return showAlert("Nama tidak boleh kosong.", 'warning');
+      toggleLoading(true, "Menyimpan perubahan...");
+      google.script.run
+        .withSuccessHandler(function(res) {
+          toggleLoading(false);
+          if (res.success) { tutupModalEditData(); showAlert("Data berhasil diperbarui.", 'success'); loadDataFromServer(); }
+          else showAlert("Error: " + res.message, 'error');
+        })
+        .withFailureHandler(function(err) {
+          toggleLoading(false);
+          showAlert("System Error: " + err.message, 'error');
+        })
+        .editDataDasar(payload);
+    }
+
+    async function uploadKtpSusulan(rowIndex, namaAhli, inputEl) {
+      const file = inputEl.files[0];
+      if (!file) return;
+      try {
+        toggleLoading(true, "Mengunggah foto KTP...");
+        const b = await fileToBase64(file);
+        google.script.run
+          .withSuccessHandler(function(res) {
+            toggleLoading(false);
+            if (res.success) { showAlert(`Foto KTP "${namaAhli}" berhasil disimpan.`, 'success'); loadDataFromServer(); }
+            else showAlert("Error: " + res.message, 'error');
+          })
+          .withFailureHandler(function(err) {
+            toggleLoading(false);
+            showAlert("System Error: " + err.message, 'error');
+          })
+          .uploadKtpSusulan({ rowIndex: parseInt(rowIndex), fileKtpBase64: b.data, fileKtpMime: b.mime });
+      } catch (e) {
+        toggleLoading(false);
+        showAlert("Gagal membaca file: " + e.message, 'error');
+      }
+      inputEl.value = "";
+    }
+
     // Ambil Data dari Backend (GAS)
     function loadDataFromServer() {
       toggleLoading(true, "Sinkronisasi Data...");
@@ -1873,7 +2019,8 @@
           toggleLoading(false);
           if(response.success) {
             // Update Dashboard
-            document.getElementById('dash-periode').innerText = response.currentPeriode;
+            periodeBerjalanServer = response.periodeBerjalan || response.currentPeriode;
+            renderPeriodeBeranda();
             document.getElementById('dash-total').innerText = response.dashboard.totalTerdaftar;
             loadDaftarPeriodeExport(); // sinkronkan dropdown Export tiap kali data di-refresh
             document.getElementById('dash-antrian').innerText = response.dashboard.totalAntrian;
@@ -1964,6 +2111,7 @@
                       </div>
                     </div>
                     ${infoTambahan}
+                    ${tombolKtpHtml(item)}
                     <div class="flex items-center justify-between mt-4">
                       <div class="text-xs text-[var(--text-sub)] flex items-center">
                          <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
@@ -1998,7 +2146,7 @@
           toggleLoading(false);
           showAlert("Gagal koneksi ke server: " + error.message, 'error');
         })
-        .getAppData();
+        .getAppData({ periode: periodeBerandaDipilih });
     }
 
     // Handler Submit Form Registrasi (Tahap 1)
